@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="精选优质网站导航，快速找到你需要的网站">
+    <meta name="keywords" content="网站导航,导航网站,网址大全,常用网站">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧭%3C/text%3E%3C/svg%3E">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+</head>
+<body>
+    <!-- 整体布局容器 -->
+    <div class="app-container">
+        <!-- 左侧边栏 -->
+        <aside class="sidebar">
+            <!-- 收缩/展开按钮 -->
+            <button class="sidebar-toggle" type="button" aria-label="收缩/展开侧边栏">
+                <span class="toggle-icon">☰</span>
+            </button>
+            
+            <!-- Logo区域 -->
+            <div class="sidebar-logo">
+                <div class="logo-icon">🧭</div>
+                <div>
+                    <div class="logo-text">网站导航</div>
+                    <div class="logo-subtitle">快速发现优质网站资源</div>
+                </div>
+            </div>
+            
+            <!-- 分类导航 -->
+            <nav class="sidebar-nav" role="navigation" aria-label="网站分类">
+                <% categories.forEach(function(category, index) { %>
+                    <button 
+                        class="nav-item <%= category.active ? 'active' : '' %>" 
+                        data-category="<%= category.name %>"
+                        type="button"
+                    >
+                        <span class="nav-icon"><%= category.icon %></span>
+                        <span class="nav-text"><%= category.name %></span>
+                    </button>
+                <% }); %>
+            </nav>
+        </aside>
+
+        <!-- 右侧主内容区域 -->
+        <main class="main-content">
+            <!-- 头部工具栏 -->
+            <header class="content-header">
+                <!-- 搜索框 -->
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="searchBox" 
+                        class="search-box" 
+                        placeholder="搜索网站名称或描述..." 
+                        autocomplete="off"
+                    >
+                    <button id="searchBtn" class="search-btn" type="button" aria-label="搜索">
+                        🔍
+                    </button>
+                </div>
+                
+                <!-- 添加网站按钮 -->
+                <button class="add-website-btn" type="button" aria-label="添加网站">
+                    <span class="add-icon">➕</span>
+                    <span class="add-text">添加网站</span>
+                </button>
+            </header>
+
+            <!-- 网站展示区域 -->
+            <section class="websites-section" aria-label="网站列表">
+                <div id="websitesContainer" class="websites-grid">
+                    <!-- 网站卡片将通过JavaScript动态加载 -->
+                    <% websites.forEach(function(website) { %>
+                        <div class="website-card" onclick="window.open('<%= website.url %>', '_blank')">
+                    <div class="website-icon"><%= website.icon %></div>
+                    <div class="website-info">
+                      <h3 class="website-name"><%= website.name %></h3>
+                      <p class="website-description"><%= website.description %></p>
+                    </div>
+                    <div class="card-actions">
+                      <div class="action-icon edit-icon" onclick="event.stopPropagation(); handleEditWebsite('<%= website.name %>');">✏️</div>
+                      <div class="action-icon delete-icon" onclick="event.stopPropagation(); handleDeleteWebsite('<%= website.name %>');">🗑️</div>
+                    </div>
+                  </div>
+                    <% }); %>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <p>© 2024 网站导航 - 发现更多精彩网站</p>
+        <p>快捷键：Ctrl/Cmd + K 快速搜索 | ESC 清空搜索</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/main.js"></script>
+    
+    <!-- 结构化数据 -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "网站导航",
+        "description": "精选优质网站导航，快速找到你需要的网站",
+        "url": "<%= process.env.SITE_URL || 'http://localhost:3000' %>",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "<%= process.env.SITE_URL || 'http://localhost:3000' %>/api/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+</body>
+</html>
