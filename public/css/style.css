@@ -207,16 +207,51 @@ body {
   margin-left: 70px;
 }
 
-/* 内容头部 */
-.content-header {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 20px 24px;
+/* 顶部导航栏 */
+.top-bar {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.top-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-link {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  color: #4f46e5;
+  background: #f3f4f6;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* 内容头部 - 现在只包含搜索框 */
+.content-header {
+  background: #f8f8f8;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* 搜索框样式 */
@@ -231,28 +266,26 @@ body {
 
 /* 添加网站按钮 */
 .add-website-btn {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
-  padding: 12px 20px;
+  background: #4f46e5;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
   color: white;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
   flex-shrink: 0;
 }
 
 .add-website-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 .add-icon {
@@ -265,21 +298,19 @@ body {
 
 .search-box {
   width: 100%;
-  padding: 16px 55px 16px 24px;
-  border: none;
-  border-radius: 50px;
-  background: rgba(255, 255, 255, 0.95);
-  font-size: 16px;
+  padding: 14px 55px 14px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 25px;
+  background: white;
+  font-size: 15px;
   outline: none;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .search-box:focus {
-  background: white;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
   transform: translateY(-1px);
 }
 
@@ -289,14 +320,14 @@ body {
 
 .search-btn {
   position: absolute;
-  right: 8px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: #4f46e5;
   border: none;
   border-radius: 50%;
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   color: white;
   cursor: pointer;
   display: flex;
@@ -560,11 +591,24 @@ footer p + p {
     padding: 30px 20px;
   }
   
+  .top-bar {
+    padding: 12px 20px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .top-nav-links {
+    justify-content: center;
+    gap: 16px;
+  }
+  
+  .top-actions {
+    justify-content: center;
+  }
+  
   .content-header {
     padding: 16px 20px;
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
   }
   
   .search-container {
@@ -625,10 +669,26 @@ footer p + p {
     padding: 25px 16px;
   }
   
+  .top-bar {
+    padding: 10px 16px;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .top-nav-links {
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .nav-link {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+  
   .content-header {
     padding: 12px 16px;
-    flex-direction: column;
-    gap: 12px;
   }
   
   .websites-section {
