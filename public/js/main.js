@@ -227,12 +227,7 @@ class NavigationApp {
   
   // 处理添加网站
   handleAddWebsite() {
-    // 显示添加网站的提示
-    utils.showToast('添加网站功能开发中，敬请期待！');
-    
-    // 这里可以添加打开添加网站对话框的逻辑
-    // 例如：显示模态框让用户输入网站信息
-    console.log('添加网站功能被点击');
+    showAddWebsiteModal();
    }
    
   // 切换侧边栏状态
@@ -417,6 +412,33 @@ function deleteCategory(categoryName) {
   }
 }
 
+// 网站管理功能
+// 显示添加网站弹窗
+function showAddWebsiteModal() {
+  const modal = document.getElementById('addWebsiteModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    // 清空表单
+    const form = document.getElementById('addWebsiteForm');
+    if (form) {
+      form.reset();
+    }
+    // 聚焦到网站名称输入框
+    const nameInput = document.getElementById('websiteName');
+    if (nameInput) {
+      setTimeout(() => nameInput.focus(), 100);
+    }
+  }
+}
+
+// 隐藏添加网站弹窗
+function hideAddWebsiteModal() {
+  const modal = document.getElementById('addWebsiteModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
 // 处理添加分类表单提交
 document.addEventListener('DOMContentLoaded', () => {
   const addCategoryForm = document.getElementById('addCategoryForm');
@@ -441,22 +463,80 @@ document.addEventListener('DOMContentLoaded', () => {
       hideAddCategoryModal();
     });
   }
+  
+  // 处理添加网站表单提交
+  const addWebsiteForm = document.getElementById('addWebsiteForm');
+  if (addWebsiteForm) {
+    addWebsiteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(addWebsiteForm);
+      const websiteData = {
+        name: formData.get('websiteName'),
+        description: formData.get('websiteDescription'),
+        url: formData.get('websiteUrl'),
+        icon: formData.get('websiteIcon'),
+        category: formData.get('websiteCategory')
+      };
+      
+      if (websiteData.name && websiteData.url && websiteData.category) {
+        try {
+          const response = await fetch('/api/websites', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(websiteData)
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            utils.showToast(`网站 "${websiteData.name}" 添加成功！`, 'success');
+            // 关闭弹窗
+            hideAddWebsiteModal();
+            // 刷新页面以显示新添加的网站
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            utils.showToast(result.message || '添加网站失败', 'error');
+          }
+        } catch (error) {
+          console.error('添加网站错误:', error);
+          utils.showToast('添加网站失败，请稍后重试', 'error');
+        }
+      } else {
+        utils.showToast('请填写所有必填字段', 'warning');
+      }
+    });
+  }
 });
 
 // 点击弹窗背景关闭弹窗
 document.addEventListener('click', (e) => {
-  const modal = document.getElementById('addCategoryModal');
-  if (modal && e.target === modal) {
+  const categoryModal = document.getElementById('addCategoryModal');
+  if (categoryModal && e.target === categoryModal) {
     hideAddCategoryModal();
+  }
+  
+  const websiteModal = document.getElementById('addWebsiteModal');
+  if (websiteModal && e.target === websiteModal) {
+    hideAddWebsiteModal();
   }
 });
 
 // ESC键关闭弹窗
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    const modal = document.getElementById('addCategoryModal');
-    if (modal && modal.style.display === 'flex') {
+    const categoryModal = document.getElementById('addCategoryModal');
+    if (categoryModal && categoryModal.style.display === 'flex') {
       hideAddCategoryModal();
+    }
+    
+    const websiteModal = document.getElementById('addWebsiteModal');
+    if (websiteModal && websiteModal.style.display === 'flex') {
+      hideAddWebsiteModal();
     }
   }
 });

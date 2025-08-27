@@ -143,6 +143,51 @@
         </div>
     </div>
 
+    <!-- 添加网站弹窗 -->
+    <div id="addWebsiteModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加网站</h3>
+                <span class="close" onclick="hideAddWebsiteModal();">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addWebsiteForm">
+                    <div class="form-group">
+                        <label for="websiteName">网站名称：</label>
+                        <input type="text" id="websiteName" name="websiteName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="websiteDescription">网站描述：</label>
+                        <input type="text" id="websiteDescription" name="websiteDescription" placeholder="简要描述网站功能">
+                    </div>
+                    <div class="form-group">
+                        <label for="websiteUrl">网站地址：</label>
+                        <input type="url" id="websiteUrl" name="websiteUrl" placeholder="https://example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="websiteIcon">网站图标：</label>
+                        <input type="text" id="websiteIcon" name="websiteIcon" placeholder="例如：🌐" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="websiteCategory">所属分类：</label>
+                        <select id="websiteCategory" name="websiteCategory" required>
+                            <option value="">请选择分类</option>
+                            <% categories.forEach(function(category) { %>
+                                <% if (category.name !== '全部') { %>
+                                    <option value="<%= category.name %>"><%= category.name %></option>
+                                <% } %>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="hideAddWebsiteModal();">取消</button>
+                        <button type="submit">添加</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- 页脚 -->
     <footer>
         <p>© 2024 网站导航 - 发现更多精彩网站</p>
