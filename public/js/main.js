@@ -371,3 +371,92 @@ document.addEventListener('DOMContentLoaded', () => {
   
   console.log('导航网站已加载完成 🚀');
 });
+
+// 分类管理功能
+// 显示添加分类弹窗
+function showAddCategoryModal() {
+  const modal = document.getElementById('addCategoryModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    // 清空表单
+    const form = document.getElementById('addCategoryForm');
+    if (form) {
+      form.reset();
+    }
+    // 聚焦到分类名称输入框
+    const nameInput = document.getElementById('categoryName');
+    if (nameInput) {
+      setTimeout(() => nameInput.focus(), 100);
+    }
+  }
+}
+
+// 隐藏添加分类弹窗
+function hideAddCategoryModal() {
+  const modal = document.getElementById('addCategoryModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// 编辑分类
+function editCategory(categoryName) {
+  utils.showToast(`编辑分类 "${categoryName}" 功能开发中...`, 'info');
+  console.log('编辑分类功能被点击:', categoryName);
+  // 这里可以添加编辑分类的逻辑
+  // 例如：显示编辑对话框，预填充当前分类信息
+}
+
+// 删除分类
+function deleteCategory(categoryName) {
+  if (confirm(`确定要删除分类 "${categoryName}" 吗？\n删除后该分类下的所有网站也将被移除。`)) {
+    utils.showToast(`删除分类 "${categoryName}" 功能开发中...`, 'warning');
+    console.log('删除分类功能被点击:', categoryName);
+    // 这里可以添加删除分类的逻辑
+    // 例如：发送删除请求到后端API
+  }
+}
+
+// 处理添加分类表单提交
+document.addEventListener('DOMContentLoaded', () => {
+  const addCategoryForm = document.getElementById('addCategoryForm');
+  if (addCategoryForm) {
+    addCategoryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(addCategoryForm);
+      const categoryName = formData.get('categoryName').trim();
+      const categoryIcon = formData.get('categoryIcon').trim();
+      
+      if (!categoryName || !categoryIcon) {
+        utils.showToast('请填写完整的分类信息', 'warning');
+        return;
+      }
+      
+      // 这里可以添加提交到后端的逻辑
+      utils.showToast(`添加分类 "${categoryName}" 功能开发中...`, 'info');
+      console.log('添加分类:', { name: categoryName, icon: categoryIcon });
+      
+      // 关闭弹窗
+      hideAddCategoryModal();
+    });
+  }
+});
+
+// 点击弹窗背景关闭弹窗
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('addCategoryModal');
+  if (modal && e.target === modal) {
+    hideAddCategoryModal();
+  }
+});
+
+// ESC键关闭弹窗
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('addCategoryModal');
+    if (modal && modal.style.display === 'flex') {
+      hideAddCategoryModal();
+    }
+  }
+});

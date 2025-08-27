@@ -45,8 +45,17 @@
                     >
                         <span class="nav-icon"><%= category.icon %></span>
                         <span class="nav-text"><%= category.name %></span>
+                        <div class="nav-actions">
+                            <span class="action-icon edit-category" onclick="event.stopPropagation(); editCategory('<%= category.name %>');">✏️</span>
+                            <span class="action-icon delete-category" onclick="event.stopPropagation(); deleteCategory('<%= category.name %>');">🗑️</span>
+                        </div>
                     </button>
                 <% }); %>
+                <!-- 添加分类按钮 -->
+                <button class="nav-item add-category-btn" type="button" onclick="showAddCategoryModal();">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">添加分类</span>
+                </button>
             </nav>
         </aside>
 
@@ -106,6 +115,32 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- 添加分类弹窗 -->
+    <div id="addCategoryModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加分类</h3>
+                <span class="close" onclick="hideAddCategoryModal();">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm">
+                    <div class="form-group">
+                        <label for="categoryName">分类名称：</label>
+                        <input type="text" id="categoryName" name="categoryName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="categoryIcon">分类图标：</label>
+                        <input type="text" id="categoryIcon" name="categoryIcon" placeholder="例如：📚" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="hideAddCategoryModal();">取消</button>
+                        <button type="submit">添加</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- 页脚 -->
