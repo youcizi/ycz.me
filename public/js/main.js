@@ -257,7 +257,8 @@ class NavigationApp {
 
 // 处理编辑网站按钮点击
 function handleEditWebsite(websiteName) {
-    utils.showToast(`编辑网站 "${websiteName}" 功能开发中...`, 'info');
+    // 调用showAddWebsiteModal并传入编辑模式参数
+    showAddWebsiteModal(true, websiteName);
     console.log('编辑网站功能被点击:', websiteName);
 }
 
@@ -414,19 +415,41 @@ function deleteCategory(categoryName) {
 
 // 网站管理功能
 // 显示添加网站弹窗
-function showAddWebsiteModal() {
+function showAddWebsiteModal(isEditMode = false, websiteName = null) {
   const modal = document.getElementById('addWebsiteModal');
   if (modal) {
     modal.style.display = 'flex';
+    
+    // 设置弹窗标题
+    const modalTitle = modal.querySelector('.modal-header h3');
+    if (modalTitle) {
+      modalTitle.textContent = isEditMode ? '编辑网站' : '添加网站';
+    }
+    
+    // 设置提交按钮文字
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.textContent = isEditMode ? '保存' : '添加';
+    }
+    
     // 清空表单
     const form = document.getElementById('addWebsiteForm');
     if (form) {
       form.reset();
+      // 设置表单的编辑模式标识
+      form.dataset.editMode = isEditMode;
+      form.dataset.originalName = websiteName || '';
     }
-    // 聚焦到网站名称输入框
-    const nameInput = document.getElementById('websiteName');
-    if (nameInput) {
-      setTimeout(() => nameInput.focus(), 100);
+    
+    if (isEditMode && websiteName) {
+      // 编辑模式：获取网站详细信息并预填充表单
+      fetchWebsiteDetails(websiteName);
+    } else {
+      // 添加模式：聚焦到网站名称输入框
+      const nameInput = document.getElementById('websiteName');
+      if (nameInput) {
+        setTimeout(() => nameInput.focus(), 100);
+      }
     }
   }
 }
@@ -436,6 +459,32 @@ function hideAddWebsiteModal() {
   const modal = document.getElementById('addWebsiteModal');
   if (modal) {
     modal.style.display = 'none';
+  }
+}
+
+// 获取网站详细信息用于编辑
+async function fetchWebsiteDetails(websiteName) {
+  try {
+    const response = await fetch(`/api/website/${encodeURIComponent(websiteName)}`);
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      const website = result.data;
+      // 预填充表单数据
+      document.getElementById('websiteName').value = website.name || '';
+      document.getElementById('websiteDescription').value = website.description || '';
+      document.getElementById('websiteUrl').value = website.url || '';
+      document.getElementById('websiteIcon').value = website.icon || '';
+      document.getElementById('websiteCategory').value = website.category || '';
+      
+      // 聚焦到网站名称输入框
+      setTimeout(() => document.getElementById('websiteName').focus(), 100);
+    } else {
+      utils.showToast('获取网站信息失败', 'error');
+    }
+  } catch (error) {
+    console.error('获取网站详细信息错误:', error);
+    utils.showToast('获取网站信息失败，请稍后重试', 'error');
   }
 }
 
@@ -481,30 +530,49 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (websiteData.name && websiteData.url && websiteData.category) {
         try {
-          const response = await fetch('/api/websites', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(websiteData)
-          });
+          const isEditMode = addWebsiteForm.dataset.editMode === 'true';
+          const originalName = addWebsiteForm.dataset.originalName;
+          
+          let response;
+          if (isEditMode) {
+            // 编辑模式：使用PUT请求
+            response = await fetch(`/api/websites/${encodeURIComponent(originalName)}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(websiteData)
+            });
+          } else {
+            // 添加模式：使用POST请求
+            response = await fetch('/api/websites', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(websiteData)
+            });
+          }
           
           const result = await response.json();
           
           if (result.success) {
-            utils.showToast(`网站 "${websiteData.name}" 添加成功！`, 'success');
+            const action = isEditMode ? '更新' : '添加';
+            utils.showToast(`网站 "${websiteData.name}" ${action}成功！`, 'success');
             // 关闭弹窗
             hideAddWebsiteModal();
-            // 刷新页面以显示新添加的网站
+            // 刷新页面以显示更新的网站
             setTimeout(() => {
               window.location.reload();
             }, 1000);
           } else {
-            utils.showToast(result.message || '添加网站失败', 'error');
+            const action = isEditMode ? '更新' : '添加';
+            utils.showToast(result.message || `${action}网站失败`, 'error');
           }
         } catch (error) {
-          console.error('添加网站错误:', error);
-          utils.showToast('添加网站失败，请稍后重试', 'error');
+          const action = isEditMode ? '更新' : '添加';
+          console.error(`${action}网站错误:`, error);
+          utils.showToast(`${action}网站失败，请稍后重试`, 'error');
         }
       } else {
         utils.showToast('请填写所有必填字段', 'warning');

@@ -103,6 +103,83 @@ class ApiController {
   }
 
   /**
+   * 根据名称获取单个网站详情
+   * @param {Object} ctx Koa上下文对象
+   */
+  async getWebsiteByName(ctx) {
+    try {
+      const { name } = ctx.params;
+      
+      if (!name) {
+        ctx.status = 400;
+        ctx.body = { success: false, message: '网站名称不能为空' };
+        return;
+      }
+
+      const website = this.websiteModel.getWebsiteByName(decodeURIComponent(name));
+      
+      if (website) {
+        ctx.body = {
+          success: true,
+          data: website
+        };
+      } else {
+        ctx.status = 404;
+        ctx.body = { success: false, message: '网站不存在' };
+      }
+    } catch (error) {
+      console.error('获取网站详情失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
+
+  /**
+   * 更新网站信息
+   * @param {Object} ctx Koa上下文对象
+   */
+  async updateWebsite(ctx) {
+    try {
+      const { name } = ctx.params;
+      const { name: newName, description, url, icon, category } = ctx.request.body;
+      
+      if (!name) {
+        ctx.status = 400;
+        ctx.body = { success: false, message: '网站名称不能为空' };
+        return;
+      }
+
+      if (!newName || !url || !category) {
+        ctx.status = 400;
+        ctx.body = { success: false, message: '网站名称、URL和分类不能为空' };
+        return;
+      }
+
+      const success = this.websiteModel.updateWebsite(decodeURIComponent(name), {
+        name: newName,
+        description,
+        url,
+        icon,
+        category
+      });
+      
+      if (success) {
+        ctx.body = {
+          success: true,
+          message: '网站更新成功'
+        };
+      } else {
+        ctx.status = 404;
+        ctx.body = { success: false, message: '网站不存在' };
+      }
+    } catch (error) {
+      console.error('更新网站失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
+
+  /**
    * 删除网站
    * @param {Object} ctx Koa上下文对象
    */

@@ -21,6 +21,8 @@ router.get('/api/websites/:category', apiController.getWebsitesByCategory.bind(a
 router.get('/api/search', apiController.searchWebsites.bind(apiController));
 router.get('/api/categories', apiController.getCategories.bind(apiController));
 router.post('/api/websites', apiController.addWebsite.bind(apiController));
+router.get('/api/website/:name', apiController.getWebsiteByName.bind(apiController));
+router.put('/api/websites/:name', apiController.updateWebsite.bind(apiController));
 router.delete('/api/websites/:name', apiController.deleteWebsite.bind(apiController));
 
 module.exports = router;

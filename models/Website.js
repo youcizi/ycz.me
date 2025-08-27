@@ -227,6 +227,36 @@ class Website {
   }
 
   /**
+   * 根据名称获取单个网站
+   * @param {string} name 网站名称
+   * @returns {Object|null} 网站对象或null
+   */
+  getWebsiteByName(name) {
+    return this.websites.find(site => site.name === name) || null;
+  }
+
+  /**
+   * 更新网站信息
+   * @param {string} originalName 原网站名称
+   * @param {Object} updatedWebsite 更新的网站对象
+   * @returns {boolean} 是否更新成功
+   */
+  updateWebsite(originalName, updatedWebsite) {
+    const index = this.websites.findIndex(site => site.name === originalName);
+    if (index !== -1) {
+      this.websites[index] = {
+        name: updatedWebsite.name,
+        description: updatedWebsite.description || '',
+        url: updatedWebsite.url,
+        icon: updatedWebsite.icon || '🌐',
+        category: updatedWebsite.category
+      };
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * 删除网站
    * @param {string} name 网站名称
    * @returns {boolean} 是否删除成功
