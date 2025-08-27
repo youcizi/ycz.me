@@ -679,6 +679,11 @@ footer p + p {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* 收缩状态下隐藏编辑和删除图标 */
+.sidebar.collapsed .nav-actions {
+  display: none !important;
+}
+
 /* 添加分类按钮样式 */
 .add-category-btn {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
