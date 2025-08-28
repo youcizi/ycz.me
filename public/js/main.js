@@ -3,6 +3,12 @@ class NavigationApp {
   constructor() {
     this.currentCategory = '全部';
     this.allWebsites = [];
+    this.cacheKeys = {
+      categories: 'nav_categories',
+      websites: 'nav_websites',
+      timestamp: 'nav_cache_timestamp'
+    };
+    this.cacheExpiry = 24 * 60 * 60 * 1000; // 24小时过期
     this.init();
   }
 
@@ -10,7 +16,139 @@ class NavigationApp {
   init() {
     this.bindEvents();
     this.initSidebarState();
-    this.loadWebsites(this.currentCategory);
+    this.loadInitialData();
+  }
+
+  // 缓存管理模块
+  // 检查缓存是否有效
+  isCacheValid() {
+    const timestamp = localStorage.getItem(this.cacheKeys.timestamp);
+    if (!timestamp) return false;
+    
+    const cacheTime = parseInt(timestamp);
+    const now = Date.now();
+    return (now - cacheTime) < this.cacheExpiry;
+  }
+
+  // 获取缓存的分类数据
+  getCachedCategories() {
+    try {
+      const data = localStorage.getItem(this.cacheKeys.categories);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('读取分类缓存失败:', error);
+      return null;
+    }
+  }
+
+  // 获取缓存的网站数据
+  getCachedWebsites(category = null) {
+    try {
+      const data = localStorage.getItem(this.cacheKeys.websites);
+      if (!data) return null;
+      
+      const websites = JSON.parse(data);
+      if (category && category !== '全部') {
+        return websites.filter(site => site.category === category);
+      }
+      return websites;
+    } catch (error) {
+      console.error('读取网站缓存失败:', error);
+      return null;
+    }
+  }
+
+  // 缓存分类数据
+  setCachedCategories(categories) {
+    try {
+      localStorage.setItem(this.cacheKeys.categories, JSON.stringify(categories));
+      localStorage.setItem(this.cacheKeys.timestamp, Date.now().toString());
+    } catch (error) {
+      console.error('缓存分类数据失败:', error);
+    }
+  }
+
+  // 缓存网站数据
+  setCachedWebsites(websites) {
+    try {
+      localStorage.setItem(this.cacheKeys.websites, JSON.stringify(websites));
+      localStorage.setItem(this.cacheKeys.timestamp, Date.now().toString());
+    } catch (error) {
+      console.error('缓存网站数据失败:', error);
+    }
+  }
+
+  // 清除所有缓存
+  clearCache() {
+    try {
+      localStorage.removeItem(this.cacheKeys.categories);
+      localStorage.removeItem(this.cacheKeys.websites);
+      localStorage.removeItem(this.cacheKeys.timestamp);
+      console.log('缓存已清除');
+    } catch (error) {
+      console.error('清除缓存失败:', error);
+    }
+  }
+
+  // 更新缓存中的单个网站
+  updateCachedWebsite(websiteData, originalName = null) {
+    try {
+      const cachedWebsites = this.getCachedWebsites() || [];
+      let updated = false;
+      
+      if (originalName) {
+        // 编辑模式：更新现有网站
+        const index = cachedWebsites.findIndex(site => site.name === originalName);
+        if (index !== -1) {
+          cachedWebsites[index] = websiteData;
+          updated = true;
+        }
+      } else {
+        // 添加模式：检查是否已存在
+        const existingIndex = cachedWebsites.findIndex(site => site.name === websiteData.name);
+        if (existingIndex !== -1) {
+          cachedWebsites[existingIndex] = websiteData;
+        } else {
+          cachedWebsites.push(websiteData);
+        }
+        updated = true;
+      }
+      
+      if (updated) {
+        this.setCachedWebsites(cachedWebsites);
+      }
+    } catch (error) {
+      console.error('更新网站缓存失败:', error);
+    }
+  }
+
+  // 从缓存中删除网站
+  removeCachedWebsite(websiteName) {
+    try {
+      const cachedWebsites = this.getCachedWebsites() || [];
+      const filteredWebsites = cachedWebsites.filter(site => site.name !== websiteName);
+      this.setCachedWebsites(filteredWebsites);
+    } catch (error) {
+      console.error('删除网站缓存失败:', error);
+    }
+  }
+
+  // 加载初始数据（优先使用缓存）
+  async loadInitialData() {
+    // 检查缓存是否有效
+    if (this.isCacheValid()) {
+      const cachedWebsites = this.getCachedWebsites(this.currentCategory);
+      if (cachedWebsites) {
+        console.log('使用缓存数据');
+        this.allWebsites = cachedWebsites;
+        this.renderWebsites(cachedWebsites);
+        return;
+      }
+    }
+    
+    // 缓存无效或不存在，从服务器加载
+    console.log('从服务器加载数据');
+    await this.loadWebsitesFromServer(this.currentCategory);
   }
 
   // 绑定事件
@@ -118,8 +256,8 @@ class NavigationApp {
     await this.loadWebsites(categoryName);
   }
 
-  // 加载网站数据
-  async loadWebsites(category) {
+  // 从服务器加载网站数据并缓存
+  async loadWebsitesFromServer(category) {
     try {
       this.showLoading();
       const response = await fetch(`/api/websites/${encodeURIComponent(category)}`);
@@ -128,6 +266,15 @@ class NavigationApp {
       if (data.success) {
         this.allWebsites = data.data;
         this.renderWebsites(data.data);
+        
+        // 缓存数据到localStorage
+        if (category === '全部') {
+          // 如果是加载全部数据，直接缓存
+          this.setCachedWebsites(data.data);
+        } else {
+          // 如果是特定分类，需要合并到现有缓存中
+          this.mergeCategoryData(category, data.data);
+        }
       } else {
         this.showError('加载失败');
       }
@@ -135,6 +282,42 @@ class NavigationApp {
       console.error('加载错误:', error);
       this.showError('网络连接失败');
     }
+  }
+
+  // 合并分类数据到缓存
+  mergeCategoryData(category, newData) {
+    try {
+      const cachedWebsites = this.getCachedWebsites() || [];
+      
+      // 移除该分类的旧数据
+      const filteredWebsites = cachedWebsites.filter(site => site.category !== category);
+      
+      // 添加新数据
+      const updatedWebsites = [...filteredWebsites, ...newData];
+      
+      // 更新缓存
+      this.setCachedWebsites(updatedWebsites);
+    } catch (error) {
+      console.error('合并分类数据失败:', error);
+    }
+  }
+
+  // 加载网站数据（优先使用缓存）
+  async loadWebsites(category) {
+    // 检查缓存是否有效
+    if (this.isCacheValid()) {
+      const cachedWebsites = this.getCachedWebsites(category);
+      if (cachedWebsites && cachedWebsites.length > 0) {
+        console.log(`使用缓存数据加载分类: ${category}`);
+        this.allWebsites = cachedWebsites;
+        this.renderWebsites(cachedWebsites);
+        return;
+      }
+    }
+    
+    // 缓存无效或不存在，从服务器加载
+    console.log(`从服务器加载分类: ${category}`);
+    await this.loadWebsitesFromServer(category);
   }
 
   // 渲染网站列表
@@ -263,10 +446,34 @@ function handleEditWebsite(websiteName) {
 }
 
 // 处理删除网站按钮点击
-function handleDeleteWebsite(websiteName) {
+async function handleDeleteWebsite(websiteName) {
     if (confirm(`确定要删除网站 "${websiteName}" 吗？`)) {
-        utils.showToast(`删除网站 "${websiteName}" 功能开发中...`, 'warning');
-        console.log('删除网站功能被点击:', websiteName);
+        try {
+            const response = await fetch(`/api/websites/${encodeURIComponent(websiteName)}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                utils.showToast(`网站 "${websiteName}" 删除成功！`, 'success');
+                
+                // 更新缓存
+                const app = window.navigationApp;
+                if (app) {
+                    app.removeCachedWebsite(websiteName);
+                }
+                
+                // 刷新页面
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                utils.showToast(result.message || '删除网站失败', 'error');
+            }
+        } catch (error) {
+            console.error('删除网站错误:', error);
+            utils.showToast('删除网站失败，请稍后重试', 'error');
+        }
     }
 }
 
@@ -332,7 +539,7 @@ const utils = {
 
 // 页面加载完成后初始化应用
 document.addEventListener('DOMContentLoaded', () => {
-  new NavigationApp();
+  window.navigationApp = new NavigationApp();
   
   // 添加一些额外的交互效果
   
@@ -366,6 +573,52 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   console.log('导航网站已加载完成 🚀');
+  
+  // 添加全局缓存管理函数
+  window.cacheManager = {
+    // 清除所有缓存
+    clear: () => {
+      if (window.navigationApp) {
+        window.navigationApp.clearCache();
+        utils.showToast('缓存已清除，页面将刷新', 'info');
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    },
+    
+    // 查看缓存状态
+    status: () => {
+      if (window.navigationApp) {
+        const app = window.navigationApp;
+        const isValid = app.isCacheValid();
+        const categories = app.getCachedCategories();
+        const websites = app.getCachedWebsites();
+        
+        console.log('缓存状态:', {
+          valid: isValid,
+          categoriesCount: categories ? categories.length : 0,
+          websitesCount: websites ? websites.length : 0,
+          timestamp: localStorage.getItem(app.cacheKeys.timestamp)
+        });
+        
+        return {
+          valid: isValid,
+          categories: categories,
+          websites: websites
+        };
+      }
+    },
+    
+    // 强制刷新数据
+    refresh: () => {
+      if (window.navigationApp) {
+        window.navigationApp.clearCache();
+        window.navigationApp.loadWebsitesFromServer('全部');
+        utils.showToast('正在刷新数据...', 'info');
+      }
+    }
+  };
+  
+  console.log('缓存管理器已加载，可使用 cacheManager.clear()、cacheManager.status()、cacheManager.refresh()');
 });
 
 // 分类管理功能
@@ -559,6 +812,17 @@ document.addEventListener('DOMContentLoaded', () => {
           if (result.success) {
             const action = isEditMode ? '更新' : '添加';
             utils.showToast(`网站 "${websiteData.name}" ${action}成功！`, 'success');
+            
+            // 更新缓存
+            const app = window.navigationApp;
+            if (app) {
+              if (isEditMode) {
+                app.updateCachedWebsite(websiteData, originalName);
+              } else {
+                app.updateCachedWebsite(websiteData);
+              }
+            }
+            
             // 关闭弹窗
             hideAddWebsiteModal();
             // 刷新页面以显示更新的网站
