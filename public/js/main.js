@@ -2,7 +2,9 @@
 class NavigationApp {
   constructor() {
     this.currentCategory = '全部';
+    this.currentFilter = 'all';
     this.allWebsites = [];
+    this.filteredWebsites = [];
     this.cacheKeys = {
       categories: 'nav_categories',
       websites: 'nav_websites',
@@ -141,7 +143,7 @@ class NavigationApp {
       if (cachedWebsites) {
         console.log('使用缓存数据');
         this.allWebsites = cachedWebsites;
-        this.renderWebsites(cachedWebsites);
+        this.applyFilter(); // 应用当前筛选
         return;
       }
     }
@@ -189,6 +191,12 @@ class NavigationApp {
     if (sidebarToggle) {
       sidebarToggle.addEventListener('click', this.toggleSidebar.bind(this));
     }
+    
+    // 筛选按钮事件
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', this.handleFilterChange.bind(this));
+    });
   }
 
   // 防抖函数
@@ -205,29 +213,32 @@ class NavigationApp {
   }
 
   // 处理搜索
-  async handleSearch() {
+  handleSearch() {
     const searchBox = document.getElementById('searchBox');
-    const query = searchBox.value.trim();
+    const query = searchBox.value.trim().toLowerCase();
     
     if (!query) {
-      this.loadWebsites(this.currentCategory);
+      // 如果搜索框为空，应用当前筛选显示网站
+      this.applyFilter();
       return;
     }
-
-    try {
-      this.showLoading();
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        this.renderWebsites(data.data);
-      } else {
-        this.showError(data.message || '搜索失败');
-      }
-    } catch (error) {
-      console.error('搜索错误:', error);
-      this.showError('搜索服务暂时不可用');
+    
+    // 先应用筛选，再在筛选结果中搜索
+    let searchBase = [...this.allWebsites];
+    if (this.currentFilter !== 'all') {
+      searchBase = this.allWebsites.filter(website => {
+        const priceType = website.priceType || 'free';
+        return priceType === this.currentFilter;
+      });
     }
+    
+    const filteredWebsites = searchBase.filter(website => {
+      return website.name.toLowerCase().includes(query) ||
+             website.description.toLowerCase().includes(query) ||
+             (website.tags && website.tags.some(tag => tag.toLowerCase().includes(query)));
+    });
+    
+    this.renderWebsites(filteredWebsites);
   }
 
   // 处理分类切换
@@ -256,6 +267,42 @@ class NavigationApp {
     await this.loadWebsites(categoryName);
   }
 
+  // 处理筛选切换
+  handleFilterChange(e) {
+    e.preventDefault();
+    const filterType = e.currentTarget.dataset.filter;
+    
+    if (filterType === this.currentFilter) {
+      return;
+    }
+
+    // 更新筛选按钮活跃状态
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    e.currentTarget.classList.add('active');
+    
+    this.currentFilter = filterType;
+    
+    // 应用筛选
+    this.applyFilter();
+  }
+
+  // 应用筛选逻辑
+  applyFilter() {
+    let filteredWebsites = [...this.allWebsites];
+    
+    if (this.currentFilter !== 'all') {
+      filteredWebsites = this.allWebsites.filter(website => {
+        const priceType = website.priceType || 'free'; // 默认为免费
+        return priceType === this.currentFilter;
+      });
+    }
+    
+    this.filteredWebsites = filteredWebsites;
+    this.renderWebsites(filteredWebsites);
+  }
+
   // 从服务器加载网站数据并缓存
   async loadWebsitesFromServer(category) {
     try {
@@ -265,7 +312,7 @@ class NavigationApp {
       
       if (data.success) {
         this.allWebsites = data.data;
-        this.renderWebsites(data.data);
+        this.applyFilter(); // 应用当前筛选
         
         // 缓存数据到localStorage
         if (category === '全部') {
@@ -310,7 +357,7 @@ class NavigationApp {
       if (cachedWebsites && cachedWebsites.length > 0) {
         console.log(`使用缓存数据加载分类: ${category}`);
         this.allWebsites = cachedWebsites;
-        this.renderWebsites(cachedWebsites);
+        this.applyFilter(); // 应用当前筛选
         return;
       }
     }
@@ -330,19 +377,25 @@ class NavigationApp {
       return;
     }
 
-    const html = websites.map(website => `
-      <div class="website-card" onclick="window.open('${website.url}', '_blank')">
-        <div class="website-icon">${website.icon}</div>
-        <div class="website-info">
-          <h3 class="website-name">${this.escapeHtml(website.name)}</h3>
-          <p class="website-description">${this.escapeHtml(website.description)}</p>
+    const html = websites.map(website => {
+      // 获取价格类型标签信息
+      const priceTypeInfo = this.getPriceTypeInfo(website.priceType || 'free');
+      
+      return `
+        <div class="website-card" onclick="window.open('${website.url}', '_blank')">
+          <div class="website-icon">${website.icon}</div>
+          <div class="website-info">
+            <h3 class="website-name">${this.escapeHtml(website.name)}</h3>
+            <p class="website-description">${this.escapeHtml(website.description)}</p>
+          </div>
+          <div class="price-tag ${priceTypeInfo.class}">${priceTypeInfo.label}</div>
+          <div class="card-actions">
+            <div class="action-icon edit-icon" onclick="event.stopPropagation(); handleEditWebsite('${this.escapeHtml(website.name)}');">✏️</div>
+            <div class="action-icon delete-icon" onclick="event.stopPropagation(); handleDeleteWebsite('${this.escapeHtml(website.name)}');">🗑️</div>
+          </div>
         </div>
-        <div class="card-actions">
-          <div class="action-icon edit-icon" onclick="event.stopPropagation(); handleEditWebsite('${this.escapeHtml(website.name)}');">✏️</div>
-          <div class="action-icon delete-icon" onclick="event.stopPropagation(); handleDeleteWebsite('${this.escapeHtml(website.name)}');">🗑️</div>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     container.innerHTML = html;
     
@@ -406,6 +459,18 @@ class NavigationApp {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // 获取价格类型标签信息
+  getPriceTypeInfo(priceType) {
+    const priceTypes = {
+      'free': { label: '免费', class: 'price-free' },
+      'paid': { label: '付费', class: 'price-paid' },
+      'trial': { label: '试用', class: 'price-trial' },
+      'points': { label: '送积分', class: 'price-points' }
+    };
+    
+    return priceTypes[priceType] || priceTypes['free'];
   }
   
   // 处理添加网站
@@ -729,6 +794,7 @@ async function fetchWebsiteDetails(websiteName) {
       document.getElementById('websiteUrl').value = website.url || '';
       document.getElementById('websiteIcon').value = website.icon || '';
       document.getElementById('websiteCategory').value = website.category || '';
+      document.getElementById('websitePriceType').value = website.priceType || 'free';
       
       // 聚焦到网站名称输入框
       setTimeout(() => document.getElementById('websiteName').focus(), 100);
@@ -778,7 +844,8 @@ document.addEventListener('DOMContentLoaded', () => {
         description: formData.get('websiteDescription'),
         url: formData.get('websiteUrl'),
         icon: formData.get('websiteIcon'),
-        category: formData.get('websiteCategory')
+        category: formData.get('websiteCategory'),
+        priceType: formData.get('websitePriceType')
       };
       
       if (websiteData.name && websiteData.url && websiteData.category) {

@@ -60,102 +60,116 @@ class Website {
 
     this.websites = [
       {
-        name: 'Baidu',
-        description: '全球最大的中文搜索引擎',
+        name: '百度',
+        description: '中国最大的搜索引擎',
         url: 'https://www.baidu.com',
         icon: '🔍',
-        category: '搜索引擎'
+        category: '搜索引擎',
+        priceType: 'free'
       },
       {
         name: 'Google',
         description: '全球最大的搜索引擎',
         url: 'https://www.google.com',
-        icon: '🌐',
-        category: '搜索引擎'
+        icon: '🔍',
+        category: '搜索引擎',
+        priceType: 'free'
       },
       {
         name: 'Bing',
         description: '微软搜索引擎',
         url: 'https://www.bing.com',
         icon: '🔍',
-        category: '搜索引擎'
+        category: '搜索引擎',
+        priceType: 'free'
       },
       {
         name: 'Weibo',
         description: '中国最大的社交平台',
         url: 'https://weibo.com',
         icon: '📱',
-        category: '社交网络'
+        category: '社交网络',
+        priceType: 'free'
       },
       {
         name: 'WeChat Web',
         description: '微信网页版',
         url: 'https://wx.qq.com',
         icon: '💬',
-        category: '社交网络'
+        category: '社交网络',
+        priceType: 'free'
       },
       {
         name: 'QQ空间',
         description: 'QQ社交平台',
         url: 'https://qzone.qq.com',
         icon: '⭐',
-        category: '社交网络'
+        category: '社交网络',
+        priceType: 'free'
       },
       {
         name: '航班信息',
         description: '航班查询服务',
         url: '#',
         icon: '✈️',
-        category: '在线工具'
+        category: '在线工具',
+        priceType: 'trial'
       },
       {
         name: '网易邮箱',
         description: '网易邮箱服务',
         url: 'https://mail.163.com',
         icon: '📧',
-        category: '在线工具'
+        category: '在线工具',
+        priceType: 'free'
       },
       {
         name: '淘宝',
         description: '中国最大的网购平台',
         url: 'https://www.taobao.com',
         icon: '🛍️',
-        category: '购物网站'
+        category: '购物网站',
+        priceType: 'free'
       },
       {
         name: '京东',
         description: '品质购物平台',
         url: 'https://www.jd.com',
         icon: '📦',
-        category: '购物网站'
+        category: '购物网站',
+        priceType: 'free'
       },
       {
         name: 'GitHub',
         description: '代码托管平台',
         url: 'https://github.com',
         icon: '💻',
-        category: '开发者工具'
+        category: '开发者工具',
+        priceType: 'paid'
       },
       {
         name: '有道翻译',
         description: '在线翻译工具',
         url: 'https://fanyi.youdao.com',
         icon: '🔤',
-        category: '在线工具'
+        category: '在线工具',
+        priceType: 'free'
       },
       {
         name: '百度网盘',
         description: '云存储服务',
         url: 'https://pan.baidu.com',
         icon: '☁️',
-        category: '在线工具'
+        category: '在线工具',
+        priceType: 'points'
       },
       {
         name: '爱奇艺',
         description: '视频娱乐平台',
         url: 'https://www.iqiyi.com',
         icon: '🎬',
-        category: '娱乐休闲'
+        category: '娱乐休闲',
+        priceType: 'paid'
       }
     ];
   }
@@ -220,7 +234,8 @@ class Website {
       description: website.description || '',
       url: website.url,
       icon: website.icon || '🌐',
-      category: website.category
+      category: website.category,
+      priceType: website.priceType || 'free'
     });
     
     return true;
@@ -249,7 +264,8 @@ class Website {
         description: updatedWebsite.description || '',
         url: updatedWebsite.url,
         icon: updatedWebsite.icon || '🌐',
-        category: updatedWebsite.category
+        category: updatedWebsite.category,
+        priceType: updatedWebsite.priceType || 'free'
       };
       return true;
     }

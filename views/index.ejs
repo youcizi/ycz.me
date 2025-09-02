@@ -95,6 +95,20 @@
                 </div>
             </header>
 
+            <!-- 筛选栏 -->
+            <div class="filter-bar">
+                <div class="filter-container">
+                    <span class="filter-label">筛选：</span>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all" type="button">全部</button>
+                        <button class="filter-btn" data-filter="free" type="button">免费</button>
+                        <button class="filter-btn" data-filter="paid" type="button">付费</button>
+                        <button class="filter-btn" data-filter="trial" type="button">试用</button>
+                        <button class="filter-btn" data-filter="points" type="button">送积分</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- 网站展示区域 -->
             <section class="websites-section" aria-label="网站列表">
                 <div id="websitesContainer" class="websites-grid">
@@ -177,6 +191,15 @@
                                     <option value="<%= category.name %>"><%= category.name %></option>
                                 <% } %>
                             <% }); %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="websitePriceType">价格类型：</label>
+                        <select id="websitePriceType" name="websitePriceType" required>
+                            <option value="free">免费</option>
+                            <option value="paid">付费</option>
+                            <option value="trial">试用</option>
+                            <option value="points">送积分</option>
                         </select>
                     </div>
                     <div class="form-actions">
