@@ -1076,13 +1076,29 @@ footer p + p {
   padding: 12px;
   border-bottom: 1px solid #e5e7eb;
   overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f8f9fa;
   background: white;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .emoji-categories::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.emoji-categories::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 3px;
+}
+
+.emoji-categories::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.emoji-categories::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .emoji-category-btn {
@@ -1253,35 +1269,9 @@ footer p + p {
 
 .icon-input-container input {
   flex: 1;
-  padding-right: 45px;
 }
 
-.icon-picker-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #f9fafb;
-  color: #6b7280;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.15s ease;
-  z-index: 10;
-}
 
-.icon-picker-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
-  border-color: #9ca3af;
-  transform: translateY(-50%) scale(1.05);
-}
 
 /* 图标选择器样式 */
 .icon-picker {

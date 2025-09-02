@@ -973,14 +973,16 @@ class EmojiIconPicker {
   }
 
   bindEvents() {
-    // 分类切换事件
-    const categoryBtns = document.querySelectorAll('.emoji-category-btn');
-    categoryBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const category = e.target.dataset.category;
-        this.switchCategory(category);
+    // 分类切换事件 - 使用事件委托处理动态生成的按钮
+    const categoryContainer = document.getElementById('emojiCategories');
+    if (categoryContainer) {
+      categoryContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('emoji-category-btn')) {
+          const category = e.target.dataset.category;
+          this.switchCategory(category);
+        }
       });
-    });
+    }
 
     // 搜索事件
     const searchInput = document.getElementById('emojiSearch');
@@ -1060,20 +1062,7 @@ class EmojiIconPicker {
       });
     });
     
-    // 为图标选择按钮添加点击事件（保持向后兼容）
-    const iconPickerBtns = document.querySelectorAll('.icon-picker-btn');
-    iconPickerBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const targetId = btn.getAttribute('data-target');
-        if (targetId) {
-          const targetInput = document.getElementById(targetId);
-          if (targetInput) {
-            this.showDropdown(targetInput);
-          }
-        }
-      });
-    });
+
   }
 
   debounce(func, wait) {
@@ -1943,8 +1932,8 @@ class EmojiIconPicker {
       }
     }
     
-    // 关闭图标选择器
-    this.hideIconPicker();
+    // 不关闭图标选择器，让用户可以连续选择表情
+    // this.hideIconPicker();
     
     // 清空自定义输入框
     const customInput = document.getElementById('customEmojiInput');
@@ -1981,113 +1970,79 @@ class EmojiIconPicker {
   }
 
   adjustPosition(targetInput, picker) {
-    const rect = targetInput.getBoundingClientRect();
+    // 获取输入框的位置信息
+    const inputRect = targetInput.getBoundingClientRect();
     const pickerHeight = window.innerWidth <= 480 ? 320 : (window.innerWidth <= 768 ? 350 : 400);
     const pickerWidth = window.innerWidth <= 480 ? 260 : (window.innerWidth <= 768 ? 280 : 320);
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
-    const scrollY = window.scrollY || document.documentElement.scrollTop;
-    const scrollX = window.scrollX || document.documentElement.scrollLeft;
+    const margin = 8; // 与输入框的间距
+    const padding = 10; // 与屏幕边缘的最小距离
     
     // 使用固定定位，相对于视窗
     picker.style.position = 'fixed';
     picker.style.zIndex = '9999';
+    picker.style.width = `${pickerWidth}px`;
+    picker.style.maxHeight = `${pickerHeight}px`;
     
-    // 移动端特殊处理
-    if (viewportWidth <= 768) {
-      // 移动端优先在输入框下方显示
-      let top = rect.bottom + 8;
-      let preferredPosition = 'below';
-      
-      // 检查下方空间是否足够
-      const spaceBelow = viewportHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      
-      if (spaceBelow < pickerHeight + 20 && spaceAbove > spaceBelow) {
-        // 上方空间更大，显示在上方
-        top = rect.top - pickerHeight - 8;
-        preferredPosition = 'above';
-      }
-      
-      // 确保不超出屏幕边界
-      if (top < 10) {
-        top = 10;
-      } else if (top + pickerHeight > viewportHeight - 10) {
-        top = viewportHeight - pickerHeight - 10;
-      }
-      
-      // 水平居中，但确保不超出边界
-      let left = (viewportWidth - pickerWidth) / 2;
-      if (left < 10) left = 10;
-      if (left + pickerWidth > viewportWidth - 10) {
-        left = viewportWidth - pickerWidth - 10;
-      }
-      
-      picker.style.top = `${top}px`;
-      picker.style.left = `${left}px`;
-      picker.style.transform = 'none';
-      return;
-    }
-    
-    // 桌面端位置计算
-    let top = rect.bottom + 8; // 输入框下方8px
-    let left = rect.left;
+    let top, left;
     let preferredPosition = 'below';
     
-    // 智能垂直定位
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
+    // 计算垂直位置
+    const spaceBelow = viewportHeight - inputRect.bottom;
+    const spaceAbove = inputRect.top;
     
-    if (spaceBelow < pickerHeight + 20) {
-      if (spaceAbove >= pickerHeight + 20) {
-        // 上方有足够空间，显示在上方
-        top = rect.top - pickerHeight - 8;
+    if (spaceBelow >= pickerHeight + margin + padding) {
+      // 下方有足够空间
+      top = inputRect.bottom + margin;
+      preferredPosition = 'below';
+    } else if (spaceAbove >= pickerHeight + margin + padding) {
+      // 上方有足够空间
+      top = inputRect.top - pickerHeight - margin;
+      preferredPosition = 'above';
+    } else {
+      // 上下都不够，选择空间更大的一侧
+      if (spaceAbove > spaceBelow) {
+        top = Math.max(padding, inputRect.top - pickerHeight - margin);
         preferredPosition = 'above';
       } else {
-        // 上下都不够，选择空间更大的一侧
-        if (spaceAbove > spaceBelow) {
-          top = Math.max(10, rect.top - pickerHeight - 8);
-          preferredPosition = 'above';
-        } else {
-          top = Math.min(rect.bottom + 8, viewportHeight - pickerHeight - 10);
-        }
+        top = Math.min(inputRect.bottom + margin, viewportHeight - pickerHeight - padding);
+        preferredPosition = 'below';
       }
     }
     
-    // 确保垂直方向不超出边界
-    if (top < 10) {
-      top = 10;
-    } else if (top + pickerHeight > viewportHeight - 10) {
-      top = viewportHeight - pickerHeight - 10;
-    }
+    // 确保垂直位置在视窗范围内
+    top = Math.max(padding, Math.min(top, viewportHeight - pickerHeight - padding));
     
-    // 智能水平定位
-    const spaceRight = viewportWidth - rect.left;
-    const spaceLeft = rect.right;
-    
-    if (spaceRight < pickerWidth + 20) {
-      if (spaceLeft >= pickerWidth + 20) {
-        // 右侧空间不够，左对齐到输入框右边
-        left = rect.right - pickerWidth;
+    // 计算水平位置
+    if (viewportWidth <= 768) {
+      // 移动端：尽量居中，但优先对齐输入框
+      left = Math.max(padding, Math.min(
+        inputRect.left,
+        viewportWidth - pickerWidth - padding
+      ));
+    } else {
+      // 桌面端：优先左对齐输入框
+      const spaceRight = viewportWidth - inputRect.left;
+      
+      if (spaceRight >= pickerWidth + padding) {
+        // 右侧空间足够，左对齐输入框
+        left = inputRect.left;
       } else {
-        // 左右都不够，居中显示
-        left = (viewportWidth - pickerWidth) / 2;
+        // 右侧空间不够，右对齐输入框
+        left = Math.max(padding, inputRect.right - pickerWidth);
       }
     }
     
-    // 确保水平方向不超出边界
-    if (left < 10) {
-      left = 10;
-    } else if (left + pickerWidth > viewportWidth - 10) {
-      left = viewportWidth - pickerWidth - 10;
-    }
+    // 确保水平位置在视窗范围内
+    left = Math.max(padding, Math.min(left, viewportWidth - pickerWidth - padding));
     
     // 应用位置
-    picker.style.top = `${top}px`;
-    picker.style.left = `${left}px`;
+    picker.style.top = `${Math.round(top)}px`;
+    picker.style.left = `${Math.round(left)}px`;
     picker.style.transform = 'none';
     
-    // 添加位置指示类（可用于CSS样式调整）
+    // 添加位置指示类
     picker.classList.remove('position-above', 'position-below');
     picker.classList.add(`position-${preferredPosition}`);
   }
