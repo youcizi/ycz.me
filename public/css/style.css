@@ -1351,12 +1351,82 @@ footer p + p {
   padding: 8px 12px;
   border-bottom: 1px solid #e5e7eb;
   overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f9fafb;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 .icon-categories::-webkit-scrollbar {
-  display: none;
+  height: 6px;
+}
+
+.icon-categories::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 3px;
+}
+
+.icon-categories::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.icon-categories::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.icon-categories-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.category-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+  font-size: 18px;
+  font-weight: bold;
+  color: #6b7280;
+  backdrop-filter: blur(4px);
+}
+
+.category-scroll-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  color: #374151;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.category-scroll-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.category-scroll-left {
+  left: 4px;
+}
+
+.category-scroll-right {
+  right: 4px;
+}
+
+.icon-categories-wrapper .icon-categories {
+  border-bottom: none;
+  flex: 1;
+  margin: 0 40px;
 }
 
 .icon-grid-container {

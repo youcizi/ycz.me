@@ -1024,6 +1024,9 @@ class EmojiIconPicker {
     // 为所有图标输入框添加焦点事件
     this.bindInputEvents();
     
+    // 绑定分类栏滚动按钮事件
+    this.bindScrollButtons();
+    
     // 点击外部关闭选择器
     document.addEventListener('click', (e) => {
       const picker = document.getElementById('iconPicker');
@@ -1077,6 +1080,41 @@ class EmojiIconPicker {
     };
   }
 
+  bindScrollButtons() {
+    const leftBtn = document.querySelector('.category-scroll-btn.left');
+    const rightBtn = document.querySelector('.category-scroll-btn.right');
+    const categoriesContainer = document.getElementById('emojiCategories');
+    
+    if (!leftBtn || !rightBtn || !categoriesContainer) return;
+    
+    const scrollAmount = 120; // 每次滚动的像素数
+    
+    leftBtn.addEventListener('click', () => {
+      categoriesContainer.scrollBy({
+        left: -scrollAmount,
+        behavior: 'smooth'
+      });
+    });
+    
+    rightBtn.addEventListener('click', () => {
+      categoriesContainer.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    });
+    
+    // 根据滚动位置更新按钮状态
+    const updateButtonStates = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = categoriesContainer;
+      leftBtn.style.opacity = scrollLeft <= 0 ? '0.5' : '1';
+      rightBtn.style.opacity = scrollLeft >= scrollWidth - clientWidth ? '0.5' : '1';
+    };
+    
+    categoriesContainer.addEventListener('scroll', updateButtonStates);
+    // 初始化按钮状态
+    setTimeout(updateButtonStates, 100);
+  }
+
   renderCategories() {
     const container = document.getElementById('emojiCategories');
     if (!container) return;
@@ -1095,24 +1133,42 @@ class EmojiIconPicker {
     if (!container) return;
 
     const emojis = this.emojiData[category] || [];
-    const html = emojis.map(emoji => {
-      return `<div class="emoji-item" title="${emoji}">${emoji}</div>`;
-    }).join('');
-
-    container.innerHTML = html;
+    
+    // 使用DocumentFragment提高性能
+    const fragment = document.createDocumentFragment();
+    
+    // 批量创建元素，避免频繁的DOM操作
+    emojis.forEach(emoji => {
+      const emojiElement = document.createElement('div');
+      emojiElement.className = 'emoji-item';
+      emojiElement.title = emoji;
+      emojiElement.textContent = emoji;
+      fragment.appendChild(emojiElement);
+    });
+    
+    // 一次性清空并添加所有元素
+    container.innerHTML = '';
+    container.appendChild(fragment);
   }
 
   switchCategory(category) {
+    // 防止重复切换到同一分类
+    if (this.currentCategory === category) {
+      return;
+    }
+    
     this.currentCategory = category;
     
-    // 更新分类按钮状态
+    // 立即更新分类按钮状态（同步操作）
     const categoryBtns = document.querySelectorAll('.emoji-category-btn');
     categoryBtns.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.category === category);
     });
 
-    // 渲染对应分类的emoji
-    this.renderEmojis(category);
+    // 使用requestAnimationFrame优化渲染性能
+    requestAnimationFrame(() => {
+      this.renderEmojis(category);
+    });
     
     // 清空搜索框
     const searchInput = document.getElementById('emojiSearch');
@@ -1970,81 +2026,109 @@ class EmojiIconPicker {
   }
 
   adjustPosition(targetInput, picker) {
-    // 获取输入框的位置信息
+    // 获取输入框的精确位置信息
     const inputRect = targetInput.getBoundingClientRect();
     const pickerHeight = window.innerWidth <= 480 ? 320 : (window.innerWidth <= 768 ? 350 : 400);
     const pickerWidth = window.innerWidth <= 480 ? 260 : (window.innerWidth <= 768 ? 280 : 320);
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
-    const margin = 8; // 与输入框的间距
-    const padding = 10; // 与屏幕边缘的最小距离
+    const margin = 4; // 减小与输入框的间距，更贴近
+    const padding = 8; // 与屏幕边缘的最小距离
+    
+    // 考虑页面滚动位置
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
     
     // 使用固定定位，相对于视窗
     picker.style.position = 'fixed';
-    picker.style.zIndex = '9999';
+    picker.style.zIndex = '10000'; // 提高层级确保显示在最前面
     picker.style.width = `${pickerWidth}px`;
     picker.style.maxHeight = `${pickerHeight}px`;
     
     let top, left;
     let preferredPosition = 'below';
     
-    // 计算垂直位置
+    // 精确计算垂直位置
     const spaceBelow = viewportHeight - inputRect.bottom;
     const spaceAbove = inputRect.top;
+    const requiredSpace = pickerHeight + margin + padding;
     
-    if (spaceBelow >= pickerHeight + margin + padding) {
-      // 下方有足够空间
+    if (spaceBelow >= requiredSpace) {
+      // 下方有足够空间，紧贴输入框下方
       top = inputRect.bottom + margin;
       preferredPosition = 'below';
-    } else if (spaceAbove >= pickerHeight + margin + padding) {
-      // 上方有足够空间
+    } else if (spaceAbove >= requiredSpace) {
+      // 上方有足够空间，紧贴输入框上方
       top = inputRect.top - pickerHeight - margin;
       preferredPosition = 'above';
     } else {
-      // 上下都不够，选择空间更大的一侧
+      // 上下都不够，选择空间更大的一侧并调整位置
       if (spaceAbove > spaceBelow) {
+        // 上方空间更大，尽量向上显示
         top = Math.max(padding, inputRect.top - pickerHeight - margin);
+        // 如果还是不够，则从顶部开始显示
+        if (top < padding) {
+          top = padding;
+        }
         preferredPosition = 'above';
       } else {
-        top = Math.min(inputRect.bottom + margin, viewportHeight - pickerHeight - padding);
+        // 下方空间更大，尽量向下显示
+        top = inputRect.bottom + margin;
+        // 如果超出视窗，则调整到合适位置
+        if (top + pickerHeight > viewportHeight - padding) {
+          top = Math.max(padding, viewportHeight - pickerHeight - padding);
+        }
         preferredPosition = 'below';
       }
     }
     
-    // 确保垂直位置在视窗范围内
-    top = Math.max(padding, Math.min(top, viewportHeight - pickerHeight - padding));
-    
-    // 计算水平位置
+    // 精确计算水平位置
     if (viewportWidth <= 768) {
-      // 移动端：尽量居中，但优先对齐输入框
-      left = Math.max(padding, Math.min(
-        inputRect.left,
-        viewportWidth - pickerWidth - padding
-      ));
+      // 移动端：优先左对齐输入框，确保不超出屏幕
+      left = inputRect.left;
+      // 如果右侧超出，则右对齐
+      if (left + pickerWidth > viewportWidth - padding) {
+        left = Math.max(padding, viewportWidth - pickerWidth - padding);
+      }
+      // 如果左侧超出，则左对齐到边距
+      if (left < padding) {
+        left = padding;
+      }
     } else {
-      // 桌面端：优先左对齐输入框
+      // 桌面端：精确左对齐输入框
+      left = inputRect.left;
+      
+      // 检查右侧是否有足够空间
       const spaceRight = viewportWidth - inputRect.left;
       
-      if (spaceRight >= pickerWidth + padding) {
-        // 右侧空间足够，左对齐输入框
-        left = inputRect.left;
-      } else {
-        // 右侧空间不够，右对齐输入框
-        left = Math.max(padding, inputRect.right - pickerWidth);
+      if (spaceRight < pickerWidth + padding) {
+        // 右侧空间不够，尝试右对齐输入框
+        const rightAlignedLeft = inputRect.right - pickerWidth;
+        if (rightAlignedLeft >= padding) {
+          left = rightAlignedLeft;
+        } else {
+          // 输入框太靠左，居中显示
+          left = Math.max(padding, (viewportWidth - pickerWidth) / 2);
+        }
       }
     }
     
-    // 确保水平位置在视窗范围内
+    // 最终边界检查
     left = Math.max(padding, Math.min(left, viewportWidth - pickerWidth - padding));
+    top = Math.max(padding, Math.min(top, viewportHeight - pickerHeight - padding));
     
-    // 应用位置
+    // 应用精确位置
     picker.style.top = `${Math.round(top)}px`;
     picker.style.left = `${Math.round(left)}px`;
     picker.style.transform = 'none';
     
-    // 添加位置指示类
+    // 添加位置指示类用于样式调整
     picker.classList.remove('position-above', 'position-below');
     picker.classList.add(`position-${preferredPosition}`);
+    
+    // 确保选择器可见性
+    picker.style.visibility = 'visible';
+    picker.style.opacity = '1';
   }
 
   // 保持向后兼容的方法
