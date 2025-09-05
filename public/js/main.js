@@ -1,3 +1,188 @@
+// 自定义弹窗组件
+class CustomModal {
+  constructor() {
+    this.modal = null;
+    this.currentResolve = null;
+    this.init();
+  }
+
+  // 初始化弹窗
+  init() {
+    this.createModal();
+    this.bindEvents();
+  }
+
+  // 创建弹窗HTML结构
+  createModal() {
+    const modalHTML = `
+      <div class="custom-modal" id="customModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div class="modal-icon" id="modalIcon"></div>
+            <h3 class="modal-title" id="modalTitle"></h3>
+          </div>
+          <div class="modal-body">
+            <p class="modal-message" id="modalMessage"></p>
+          </div>
+          <div class="modal-footer" id="modalFooter">
+            <!-- 按钮将动态添加 -->
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // 添加到body末尾
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    this.modal = document.getElementById('customModal');
+  }
+
+  // 绑定事件
+  bindEvents() {
+    // 点击遮罩层关闭弹窗
+    this.modal.addEventListener('click', (e) => {
+      if (e.target === this.modal) {
+        this.hide(false);
+      }
+    });
+
+    // ESC键关闭弹窗
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.modal.classList.contains('show')) {
+        this.hide(false);
+      }
+    });
+  }
+
+  // 显示弹窗
+  show(options) {
+    return new Promise((resolve) => {
+      this.currentResolve = resolve;
+      
+      const {
+        type = 'info',
+        title = '提示',
+        message = '',
+        confirmText = '确定',
+        cancelText = '取消',
+        showCancel = false
+      } = options;
+
+      // 设置图标
+      const iconElement = document.getElementById('modalIcon');
+      iconElement.className = `modal-icon ${type}`;
+      iconElement.innerHTML = this.getIcon(type);
+
+      // 设置标题和消息
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalMessage').textContent = message;
+
+      // 设置按钮
+      this.setButtons(confirmText, cancelText, showCancel);
+
+      // 显示弹窗
+      this.modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+
+  // 隐藏弹窗
+  hide(result = false) {
+    // 添加hiding状态以触发退出动画
+    this.modal.classList.add('hiding');
+    this.modal.classList.remove('show');
+    
+    // 等待动画完成后完全隐藏
+    setTimeout(() => {
+      this.modal.classList.remove('hiding');
+      document.body.style.overflow = '';
+      
+      if (this.currentResolve) {
+        this.currentResolve(result);
+        this.currentResolve = null;
+      }
+    }, 300); // 与CSS动画时间匹配
+  }
+
+  // 获取图标
+  getIcon(type) {
+    const icons = {
+      info: 'ℹ️',
+      warning: '⚠️',
+      error: '❌',
+      success: '✅',
+      confirm: '❓'
+    };
+    return icons[type] || icons.info;
+  }
+
+  // 设置按钮
+  setButtons(confirmText, cancelText, showCancel) {
+    const footer = document.getElementById('modalFooter');
+    footer.innerHTML = '';
+
+    if (showCancel) {
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'modal-btn secondary';
+      cancelBtn.textContent = cancelText;
+      cancelBtn.onclick = () => this.hide(false);
+      footer.appendChild(cancelBtn);
+    }
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = showCancel ? 'modal-btn primary' : 'modal-btn primary';
+    confirmBtn.textContent = confirmText;
+    confirmBtn.onclick = () => this.hide(true);
+    footer.appendChild(confirmBtn);
+
+    // 自动聚焦到确认按钮
+    setTimeout(() => confirmBtn.focus(), 100);
+  }
+
+  // 静态方法：显示确认对话框
+  static showConfirm(message, title = '确认', options = {}) {
+    if (!window.customModal) {
+      window.customModal = new CustomModal();
+    }
+    return window.customModal.show({
+      type: 'confirm',
+      title,
+      message,
+      showCancel: true,
+      confirmText: options.confirmText || '确定',
+      cancelText: options.cancelText || '取消'
+    });
+  }
+
+  // 静态方法：显示信息提示
+  static showAlert(message, title = '提示', type = 'info') {
+    if (!window.customModal) {
+      window.customModal = new CustomModal();
+    }
+    return window.customModal.show({
+      type,
+      title,
+      message,
+      showCancel: false,
+      confirmText: '确定'
+    });
+  }
+
+  // 静态方法：显示成功消息
+  static showSuccess(message, title = '成功') {
+    return CustomModal.showAlert(message, title, 'success');
+  }
+
+  // 静态方法：显示警告消息
+  static showWarning(message, title = '警告') {
+    return CustomModal.showAlert(message, title, 'warning');
+  }
+
+  // 静态方法：显示错误消息
+  static showError(message, title = '错误') {
+    return CustomModal.showAlert(message, title, 'error');
+  }
+}
+
 // 主要功能模块
 class NavigationApp {
   constructor() {
@@ -512,7 +697,16 @@ function handleEditWebsite(websiteName) {
 
 // 处理删除网站按钮点击
 async function handleDeleteWebsite(websiteName) {
-    if (confirm(`确定要删除网站 "${websiteName}" 吗？`)) {
+    const confirmed = await CustomModal.showConfirm(
+        `确定要删除网站 "${websiteName}" 吗？`,
+        '确认删除',
+        {
+            confirmText: '删除',
+            cancelText: '取消'
+        }
+    );
+    
+    if (confirmed) {
         try {
             const response = await fetch(`/api/websites/${encodeURIComponent(websiteName)}`, {
                 method: 'DELETE'
@@ -556,49 +750,196 @@ const utils = {
   async copyToClipboard(text) {
     try {
       await navigator.clipboard.writeText(text);
-      this.showToast('已复制到剪贴板');
+      this.showToast('已复制到剪贴板', 'success');
     } catch (err) {
       console.error('复制失败:', err);
     }
   },
 
   // 显示提示消息
-  showToast(message, duration = 3000) {
-    // 创建提示元素
+  showToast(message, type = 'info', duration = 5000) {
+    // 确保toast容器存在
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+      toastContainer = document.createElement('div');
+      toastContainer.id = 'toast-container';
+      toastContainer.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      `;
+      document.body.appendChild(toastContainer);
+    }
+
+    // 定义不同类型的样式和图标
+    const toastTypes = {
+      success: {
+        background: 'linear-gradient(135deg, #10b981, #059669)',
+        icon: '✓',
+        color: '#ffffff'
+      },
+      error: {
+        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+        icon: '✕',
+        color: '#ffffff'
+      },
+      warning: {
+        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        icon: '⚠',
+        color: '#ffffff'
+      },
+      info: {
+        background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+        icon: 'ℹ',
+        color: '#ffffff'
+      }
+    };
+
+    const toastStyle = toastTypes[type] || toastTypes.info;
+
+    // 创建toast元素
     const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    toast.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 12px 20px;
-      border-radius: 6px;
-      z-index: 1000;
-      font-size: 14px;
-      opacity: 0;
-      transform: translateX(100%);
-      transition: all 0.3s ease;
+    toast.className = `toast toast-${type}`;
+    
+    // 创建图标元素
+    const iconElement = document.createElement('span');
+    iconElement.className = 'toast-icon';
+    iconElement.textContent = toastStyle.icon;
+    iconElement.style.cssText = `
+      font-size: 16px;
+      font-weight: bold;
+      margin-right: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
     `;
+
+    // 创建消息元素
+    const messageElement = document.createElement('span');
+    messageElement.className = 'toast-message';
+    messageElement.textContent = message;
+    messageElement.style.cssText = `
+      flex: 1;
+      line-height: 1.4;
+    `;
+
+    // 组装toast内容
+    toast.appendChild(iconElement);
+    toast.appendChild(messageElement);
+
+    // 设置toast样式
+    toast.style.cssText = `
+      display: flex;
+      align-items: center;
+      background: ${toastStyle.background};
+      color: ${toastStyle.color};
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 14px;
+      font-weight: 500;
+      min-width: 280px;
+      max-width: 400px;
+      opacity: 0;
+      transform: translateX(100%) scale(0.95);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    `;
+
+    // 添加微光效果
+    const shimmer = document.createElement('div');
+    shimmer.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      animation: shimmer 2s infinite;
+      pointer-events: none;
+    `;
+    toast.appendChild(shimmer);
+
+    // 添加shimmer动画样式
+    if (!document.getElementById('toast-shimmer-style')) {
+      const style = document.createElement('style');
+      style.id = 'toast-shimmer-style';
+      style.textContent = `
+        @keyframes shimmer {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+        .toast:hover {
+          transform: translateX(0) scale(1.02) !important;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // 计算toast位置（堆叠效果）
+    const existingToasts = toastContainer.children.length;
     
-    document.body.appendChild(toast);
-    
+    // 添加到容器
+    toastContainer.appendChild(toast);
+
+    // 点击关闭功能
+    toast.addEventListener('click', () => {
+      hideToast(toast);
+    });
+
     // 显示动画
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       toast.style.opacity = '1';
-      toast.style.transform = 'translateX(0)';
-    }, 10);
-    
-    // 隐藏动画
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateX(100%)';
-      setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 300);
+      toast.style.transform = 'translateX(0) scale(1)';
+    });
+
+    // 自动隐藏
+    const hideTimer = setTimeout(() => {
+      hideToast(toast);
     }, duration);
+
+    // 鼠标悬停暂停自动隐藏
+    toast.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimer);
+    });
+
+    toast.addEventListener('mouseleave', () => {
+      setTimeout(() => {
+        hideToast(toast);
+      }, 1000); // 鼠标离开后1秒自动关闭
+    });
+
+    // 隐藏toast的函数
+    function hideToast(toastElement) {
+      if (toastElement && toastElement.parentNode) {
+        toastElement.style.opacity = '0';
+        toastElement.style.transform = 'translateX(100%) scale(0.95)';
+        setTimeout(() => {
+          if (toastElement.parentNode) {
+            toastElement.parentNode.removeChild(toastElement);
+          }
+          // 如果容器为空，移除容器
+          if (toastContainer && toastContainer.children.length === 0) {
+            toastContainer.remove();
+          }
+        }, 400);
+      }
+    }
+
+    return toast;
   }
 };
 
@@ -722,8 +1063,17 @@ function editCategory(categoryName) {
 }
 
 // 删除分类
-function deleteCategory(categoryName) {
-  if (confirm(`确定要删除分类 "${categoryName}" 吗？\n删除后该分类下的所有网站也将被移除。`)) {
+async function deleteCategory(categoryName) {
+  const confirmed = await CustomModal.showConfirm(
+    `确定要删除分类 "${categoryName}" 吗？\n删除后该分类下的所有网站也将被移除。`,
+    '确认删除分类',
+    {
+      confirmText: '删除',
+      cancelText: '取消'
+    }
+  );
+  
+  if (confirmed) {
     utils.showToast(`删除分类 "${categoryName}" 功能开发中...`, 'warning');
     console.log('删除分类功能被点击:', categoryName);
     // 这里可以添加删除分类的逻辑
