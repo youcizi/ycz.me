@@ -257,7 +257,33 @@
     </footer>
 
     <!-- JavaScript -->
+    <!-- IndexedDB存储系统 -->
+    <link rel="stylesheet" href="/css/password-manager.css">
+    <link rel="stylesheet" href="/css/data-manager.css">
+    
+    <script src="/js/CryptoUtils.js"></script>
+    <script src="/js/NavigationDB.js"></script>
+    <script src="/js/DataManager.js"></script>
+    <script src="/js/PasswordManager.js"></script>
+    <script src="/js/DataManagerUI.js"></script>
+    <script src="/js/StorageIntegration.js"></script>
+    
+    <!-- 主应用脚本 -->
     <script src="/js/main.js"></script>
+    
+    <!-- 初始化存储集成系统 -->
+    <script>
+        // 等待页面加载完成后初始化存储系统
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // 初始化存储集成系统
+                await initializeStorageIntegration();
+                console.log('存储集成系统初始化成功');
+            } catch (error) {
+                console.error('存储集成系统初始化失败，使用传统模式:', error);
+            }
+        });
+    </script>
     
     <!-- 结构化数据 -->
     <script type="application/ld+json">
