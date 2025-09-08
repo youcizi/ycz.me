@@ -45,10 +45,12 @@
 }
 
 .nav-text {
+    display: flex;
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--text-color, #333);
 }
 
 /* 分类操作按钮 */

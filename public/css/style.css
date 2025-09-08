@@ -1426,7 +1426,7 @@ footer p + p {
 .icon-categories-wrapper .icon-categories {
   border-bottom: none;
   flex: 1;
-  margin: 0 40px;
+  margin: 0;
 }
 
 .icon-grid-container {

@@ -1217,10 +1217,23 @@ function hideAddWebsiteModal() {
 }
 
 // 动态更新分类选择器
+// 防重复调用标志
+let isUpdatingCategorySelector = false;
+
 async function updateCategorySelector() {
+  // 防止重复调用
+  if (isUpdatingCategorySelector) {
+    return;
+  }
+  
+  isUpdatingCategorySelector = true;
+  
   try {
     const categorySelect = document.getElementById('websiteCategory');
-    if (!categorySelect) return;
+    if (!categorySelect) {
+      isUpdatingCategorySelector = false;
+      return;
+    }
     
     // 完全清空现有选项，包括HTML中的默认选项
     categorySelect.innerHTML = '';
@@ -1279,6 +1292,9 @@ async function updateCategorySelector() {
     
   } catch (error) {
     console.error('更新分类选择器失败:', error);
+  } finally {
+    // 重置防重复调用标志
+    isUpdatingCategorySelector = false;
   }
 }
 
