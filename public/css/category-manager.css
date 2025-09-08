@@ -1,0 +1,476 @@
+/* 分类管理器样式 */
+
+/* 分类项基础样式 */
+.nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin: 4px 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+    user-select: none;
+}
+
+.nav-item:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+    transform: translateX(2px);
+}
+
+.nav-item.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+}
+
+.nav-item.active .nav-icon {
+    transform: scale(1.1);
+}
+
+/* 分类图标和文本 */
+.nav-icon {
+    font-size: 18px;
+    margin-right: 12px;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.nav-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 分类操作按钮 */
+.nav-actions {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.nav-item:hover .nav-actions {
+    display: flex;
+}
+
+.action-icon {
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.action-icon:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+/* 拖拽状态 */
+.nav-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.nav-item.drag-over-top {
+    border-top: 2px solid var(--primary-color);
+}
+
+.nav-item.drag-over-bottom {
+    border-bottom: 2px solid var(--primary-color);
+}
+
+/* 添加分类按钮 */
+.add-category-btn {
+    border: 2px dashed var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.add-category-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(74, 144, 226, 0.05);
+    transform: none;
+}
+
+.add-category-btn .nav-icon {
+    margin-right: 8px;
+}
+
+/* 分类弹窗样式 */
+.category-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.category-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.category-modal .modal-content {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow: hidden;
+    transform: scale(0.9) translateY(-20px);
+    transition: transform 0.3s ease;
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.category-modal.show .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.category-modal .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.category-modal .modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.category-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.category-modal .modal-close:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.category-modal .modal-body {
+    padding: 24px;
+}
+
+.category-modal .form-group {
+    margin-bottom: 20px;
+}
+
+.category-modal .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.category-modal label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.category-modal input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--input-bg, #ffffff);
+    color: var(--text-primary, #1f2937);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.category-modal input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-color, #4a90e2);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.icon-input-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.icon-input-container input[type="text"] {
+    flex: 1;
+}
+
+.icon-picker-btn {
+    padding: 12px 16px;
+    background: var(--primary-color, #4a90e2);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.icon-picker-btn:hover {
+    background: var(--primary-hover, #357abd);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(74, 144, 226, 0.3);
+}
+
+.category-modal .modal-footer {
+    padding: 16px 24px 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.modal-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.modal-btn.secondary {
+    background: var(--hover-bg, #f3f4f6);
+    color: var(--text-primary, #1f2937);
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.modal-btn.secondary:hover {
+    background: var(--border-color, #e5e7eb);
+    transform: translateY(-1px);
+}
+
+.modal-btn.primary {
+    background: var(--primary-color, #4a90e2);
+    color: white;
+    border: 1px solid var(--primary-color, #4a90e2);
+}
+
+.modal-btn.primary:hover {
+    background: var(--primary-hover, #357abd);
+    border-color: var(--primary-hover, #357abd);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(74, 144, 226, 0.3);
+}
+
+/* 右键菜单样式 */
+.category-context-menu {
+    background: var(--card-bg, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    padding: 8px 0;
+    min-width: 160px;
+    z-index: 10002;
+    position: fixed;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: var(--text-primary, #1f2937);
+    font-size: 14px;
+}
+
+.context-menu-item:hover {
+    background: var(--hover-bg, #f3f4f6);
+}
+
+.context-menu-icon {
+    margin-right: 12px;
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.context-menu-text {
+    flex: 1;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .category-modal .modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .category-modal .modal-body {
+        padding: 20px;
+    }
+    
+    .icon-input-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .icon-picker-btn {
+        margin-top: 8px;
+    }
+    
+    .nav-item {
+        padding: 10px 12px;
+    }
+    
+    .nav-actions {
+        display: flex;
+    }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+    .category-modal {
+        background: rgba(0, 0, 0, 0.7);
+    }
+    
+    .category-context-menu {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* 动画效果 */
+@keyframes categorySlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.nav-item {
+    animation: categorySlideIn 0.3s ease;
+}
+
+/* 拖拽指示器动画 */
+.nav-item.drag-over-top,
+.nav-item.drag-over-bottom {
+    animation: dragIndicator 0.5s ease infinite alternate;
+}
+
+@keyframes dragIndicator {
+    from {
+        border-color: var(--primary-color);
+    }
+    to {
+        border-color: var(--primary-hover);
+    }
+}
+
+/* 加载状态 */
+.nav-item.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.nav-item.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-color);
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translateY(-50%);
+}
+
+@keyframes spin {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* 错误状态 */
+.nav-item.error {
+    border-left: 3px solid #e74c3c;
+    background: rgba(231, 76, 60, 0.05);
+}
+
+/* 成功状态 */
+.nav-item.success {
+    border-left: 3px solid #27ae60;
+    background: rgba(39, 174, 96, 0.05);
+}
+
+/* 无障碍支持 */
+.nav-item:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.modal-btn:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+    .nav-item {
+        border: 1px solid var(--border-color);
+    }
+    
+    .nav-item.active {
+        border: 2px solid var(--primary-color);
+    }
+    
+    .category-modal .modal-content {
+        border: 2px solid var(--border-color);
+    }
+}
+
+/* 减少动画模式 */
+@media (prefers-reduced-motion: reduce) {
+    .nav-item,
+    .category-modal,
+    .category-modal .modal-content,
+    .action-icon,
+    .modal-btn {
+        transition: none;
+        animation: none;
+    }
+}

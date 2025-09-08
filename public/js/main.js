@@ -196,14 +196,45 @@ class NavigationApp {
       timestamp: 'nav_cache_timestamp'
     };
     this.cacheExpiry = 24 * 60 * 60 * 1000; // 24小时过期
+    this.categoryManager = null;
     this.init();
   }
 
   // 初始化应用
-  init() {
+  async init() {
     this.bindEvents();
     this.initSidebarState();
+    await this.initStorage();
+    this.initCategoryManager();
     this.loadInitialData();
+  }
+
+  // 初始化存储
+  async initStorage() {
+    try {
+      // 初始化NavigationDB
+      if (typeof NavigationDB !== 'undefined') {
+        this.navigationDB = new NavigationDB();
+        await this.navigationDB.init();
+      }
+      
+      // 初始化StorageIntegration
+       if (typeof StorageIntegration !== 'undefined') {
+         this.storageIntegration = new StorageIntegration();
+         await this.storageIntegration.initialize();
+       }
+    } catch (error) {
+      console.error('存储初始化失败:', error);
+    }
+  }
+
+  // 初始化分类管理器
+  initCategoryManager() {
+    if (typeof CategoryManager !== 'undefined' && this.navigationDB) {
+      this.categoryManager = new CategoryManager(this.navigationDB, this.storageIntegration);
+      // 将categoryManager设为全局变量，供模板中的onclick使用
+      window.categoryManager = this.categoryManager;
+    }
   }
 
   // 缓存管理模块
@@ -1056,10 +1087,47 @@ function hideAddCategoryModal() {
 
 // 编辑分类
 function editCategory(categoryName) {
-  utils.showToast(`编辑分类 "${categoryName}" 功能开发中...`, 'info');
-  console.log('编辑分类功能被点击:', categoryName);
-  // 这里可以添加编辑分类的逻辑
-  // 例如：显示编辑对话框，预填充当前分类信息
+  if (window.categoryManager) {
+    // 查找分类数据
+    const category = window.categoryManager.categories.find(cat => cat.name === categoryName);
+    if (category) {
+      showEditCategoryModal(category);
+    } else {
+      utils.showToast('未找到该分类', 'error');
+    }
+  } else {
+    utils.showToast('分类管理器未初始化', 'error');
+  }
+}
+
+// 显示编辑分类弹窗
+function showEditCategoryModal(category) {
+  const modal = document.getElementById('editCategoryModal');
+  if (modal) {
+    // 预填充表单数据
+    document.getElementById('editCategoryOriginalName').value = category.name;
+    document.getElementById('editCategoryName').value = category.name;
+    document.getElementById('editCategoryIcon').value = category.icon;
+    
+    modal.style.display = 'flex';
+    
+    // 聚焦到分类名称输入框
+    setTimeout(() => {
+      const nameInput = document.getElementById('editCategoryName');
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.select();
+      }
+    }, 100);
+  }
+}
+
+// 隐藏编辑分类弹窗
+function hideEditCategoryModal() {
+  const modal = document.getElementById('editCategoryModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
 }
 
 // 删除分类
@@ -1074,16 +1142,31 @@ async function deleteCategory(categoryName) {
   );
   
   if (confirmed) {
-    utils.showToast(`删除分类 "${categoryName}" 功能开发中...`, 'warning');
-    console.log('删除分类功能被点击:', categoryName);
-    // 这里可以添加删除分类的逻辑
-    // 例如：发送删除请求到后端API
+    if (window.categoryManager) {
+      try {
+        // 查找分类对象
+        const categories = await window.categoryManager.storage.getCategories();
+        const category = categories.find(c => c.name === categoryName);
+        
+        if (category) {
+          // 调用分类管理器的删除方法
+          await window.categoryManager.handleDeleteCategory(category);
+        } else {
+          utils.showToast('未找到该分类', 'error');
+        }
+      } catch (error) {
+        console.error('删除分类错误:', error);
+        utils.showToast('删除分类失败，请稍后重试', 'error');
+      }
+    } else {
+      utils.showToast('分类管理器未初始化', 'error');
+    }
   }
 }
 
 // 网站管理功能
 // 显示添加网站弹窗
-function showAddWebsiteModal(isEditMode = false, websiteName = null) {
+async function showAddWebsiteModal(isEditMode = false, websiteName = null) {
   const modal = document.getElementById('addWebsiteModal');
   if (modal) {
     modal.style.display = 'flex';
@@ -1109,6 +1192,9 @@ function showAddWebsiteModal(isEditMode = false, websiteName = null) {
       form.dataset.originalName = websiteName || '';
     }
     
+    // 动态更新分类选择器
+    await updateCategorySelector();
+    
     if (isEditMode && websiteName) {
       // 编辑模式：获取网站详细信息并预填充表单
       fetchWebsiteDetails(websiteName);
@@ -1127,6 +1213,72 @@ function hideAddWebsiteModal() {
   const modal = document.getElementById('addWebsiteModal');
   if (modal) {
     modal.style.display = 'none';
+  }
+}
+
+// 动态更新分类选择器
+async function updateCategorySelector() {
+  try {
+    const categorySelect = document.getElementById('websiteCategory');
+    if (!categorySelect) return;
+    
+    // 完全清空现有选项，包括HTML中的默认选项
+    categorySelect.innerHTML = '';
+    
+    // 添加默认选项
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '请选择分类';
+    categorySelect.appendChild(defaultOption);
+    
+    // 从本地存储获取分类数据
+    let categories = [];
+    
+    // 检查是否有存储集成系统
+    if (window.storageIntegration && window.storageIntegration.getStorageAdapter) {
+      try {
+        const adapter = window.storageIntegration.getStorageAdapter();
+        categories = await adapter.getCategories();
+      } catch (error) {
+        console.warn('从IndexedDB获取分类失败，尝试从localStorage获取:', error);
+        // 降级到localStorage
+        const storedCategories = localStorage.getItem('categories');
+        if (storedCategories) {
+          categories = JSON.parse(storedCategories);
+        }
+      }
+    } else {
+      // 降级到localStorage
+      const storedCategories = localStorage.getItem('categories');
+      if (storedCategories) {
+        categories = JSON.parse(storedCategories);
+      }
+    }
+    
+    // 如果本地没有分类数据，使用默认分类
+    if (!categories || categories.length === 0) {
+      categories = [
+        { name: '工具', icon: '🔧' },
+        { name: '学习', icon: '📚' },
+        { name: '娱乐', icon: '🎮' },
+        { name: '社交', icon: '💬' },
+        { name: '购物', icon: '🛒' },
+        { name: '新闻', icon: '📰' }
+      ];
+    }
+    
+    // 添加分类选项（排除"全部"分类）
+    categories.forEach(category => {
+      if (category.name && category.name !== '全部') {
+        const option = document.createElement('option');
+        option.value = category.name;
+        option.textContent = category.name;
+        categorySelect.appendChild(option);
+      }
+    });
+    
+  } catch (error) {
+    console.error('更新分类选择器失败:', error);
   }
 }
 
@@ -1179,6 +1331,31 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // 关闭弹窗
       hideAddCategoryModal();
+    });
+  }
+  
+  // 处理编辑分类表单提交
+  const editCategoryForm = document.getElementById('editCategoryForm');
+  if (editCategoryForm) {
+    editCategoryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(editCategoryForm);
+      const categoryName = formData.get('categoryName').trim();
+      const categoryIcon = formData.get('categoryIcon').trim();
+      const originalName = formData.get('originalName');
+      
+      if (!categoryName || !categoryIcon) {
+        utils.showToast('请填写完整的分类信息', 'warning');
+        return;
+      }
+      
+      // 这里可以添加提交到后端的逻辑
+      utils.showToast(`编辑分类 "${categoryName}" 功能开发中...`, 'info');
+      console.log('编辑分类:', { originalName, name: categoryName, icon: categoryIcon });
+      
+      // 关闭弹窗
+      hideEditCategoryModal();
     });
   }
   
@@ -1269,6 +1446,11 @@ document.addEventListener('click', (e) => {
     hideAddCategoryModal();
   }
   
+  const editCategoryModal = document.getElementById('editCategoryModal');
+  if (editCategoryModal && e.target === editCategoryModal) {
+    hideEditCategoryModal();
+  }
+  
   const websiteModal = document.getElementById('addWebsiteModal');
   if (websiteModal && e.target === websiteModal) {
     hideAddWebsiteModal();
@@ -1281,6 +1463,11 @@ document.addEventListener('keydown', (e) => {
     const categoryModal = document.getElementById('addCategoryModal');
     if (categoryModal && categoryModal.style.display === 'flex') {
       hideAddCategoryModal();
+    }
+    
+    const editCategoryModal = document.getElementById('editCategoryModal');
+    if (editCategoryModal && editCategoryModal.style.display === 'flex') {
+      hideEditCategoryModal();
     }
     
     const websiteModal = document.getElementById('addWebsiteModal');
@@ -2330,11 +2517,11 @@ class EmojiIconPicker {
 
   selectEmoji(emoji) {
     if (this.currentTarget) {
-      const targetInput = document.getElementById(this.currentTarget);
-      if (targetInput) {
-        targetInput.value = emoji;
+      // 直接使用存储的元素引用，而不是通过id查找
+      if (this.currentTarget.value !== undefined) {
+        this.currentTarget.value = emoji;
         // 触发input事件以便其他监听器能够响应
-        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+        this.currentTarget.dispatchEvent(new Event('input', { bubbles: true }));
       }
     }
     
@@ -2349,7 +2536,8 @@ class EmojiIconPicker {
   }
 
   showDropdown(targetInput) {
-    this.currentTarget = targetInput.id;
+    // 直接存储元素引用，而不是id
+    this.currentTarget = targetInput;
     const picker = document.getElementById('iconPicker');
     if (!picker) return;
     
@@ -2372,6 +2560,7 @@ class EmojiIconPicker {
     if (picker) {
       picker.classList.remove('show');
     }
+    // 重置当前目标元素引用
     this.currentTarget = null;
   }
 
@@ -2391,7 +2580,7 @@ class EmojiIconPicker {
     
     // 使用固定定位，相对于视窗
     picker.style.position = 'fixed';
-    picker.style.zIndex = '10000'; // 提高层级确保显示在最前面
+    picker.style.zIndex = '10003'; // 提高层级确保显示在最前面，高于分类弹窗和右键菜单
     picker.style.width = `${pickerWidth}px`;
     picker.style.maxHeight = `${pickerHeight}px`;
     
@@ -2492,10 +2681,36 @@ class EmojiIconPicker {
   hideIconPicker() {
     this.hideDropdown();
   }
+
+  // 重新绑定输入框事件，用于动态创建的元素
+  bindInputEvents(container = document) {
+    const iconInputs = container.querySelectorAll('.icon-input');
+    iconInputs.forEach(input => {
+      // 移除已有的事件监听器，避免重复绑定
+      input.removeEventListener('click', input._iconClickHandler);
+      input.removeEventListener('focus', input._iconFocusHandler);
+      
+      // 创建事件处理函数，使用实例方法
+      input._iconClickHandler = () => {
+        this.showDropdown(input);
+      };
+      input._iconFocusHandler = () => {
+        this.showDropdown(input);
+      };
+      
+      // 绑定事件
+      input.addEventListener('click', input._iconClickHandler);
+      input.addEventListener('focus', input._iconFocusHandler);
+      
+      // 允许用户手动输入图标，不设置readonly属性
+      input.style.cursor = 'text';
+    });
+  }
 }
 
 // 全局图标选择器实例
 let emojiIconPicker = null;
+window.emojiIconPicker = null;
 
 // 显示图标选择器
 function showIconPicker(targetInputId) {
@@ -2516,5 +2731,25 @@ function hideIconPicker() {
 document.addEventListener('DOMContentLoaded', () => {
   if (!emojiIconPicker) {
     emojiIconPicker = new EmojiIconPicker();
+    window.emojiIconPicker = emojiIconPicker;
   }
+  
+  // 为图标输入框添加点击事件
+  const iconInputs = document.querySelectorAll('.icon-input');
+  iconInputs.forEach(input => {
+    input.addEventListener('click', function() {
+      showIconPicker(this.id);
+    });
+    
+    // 添加焦点事件，当输入框获得焦点时也显示图标选择器
+    input.addEventListener('focus', function() {
+      showIconPicker(this.id);
+    });
+    
+    // 允许用户手动输入图标，不设置readonly属性
+    input.style.cursor = 'text';
+  });
+  
+  // 初始化主应用
+  window.navigationApp = new NavigationApp();
 });

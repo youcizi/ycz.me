@@ -12,6 +12,7 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/category-manager.css">
     
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,7 +53,7 @@
                     </button>
                 <% }); %>
                 <!-- 添加分类按钮 -->
-                <button class="nav-item add-category-btn" type="button" onclick="showAddCategoryModal();">
+                <button class="nav-item add-category-btn" type="button">
                     <span class="nav-icon">➕</span>
                     <span class="nav-text">添加分类</span>
                 </button>
@@ -159,6 +160,35 @@
         </div>
     </div>
 
+    <!-- 编辑分类弹窗 -->
+    <div id="editCategoryModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>编辑分类</h3>
+                <span class="close" onclick="hideEditCategoryModal();">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editCategoryForm">
+                    <input type="hidden" id="editCategoryOriginalName" name="originalName">
+                    <div class="form-group">
+                        <label for="editCategoryName">分类名称：</label>
+                        <input type="text" id="editCategoryName" name="categoryName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCategoryIcon">分类图标：</label>
+                        <div class="icon-input-container">
+                            <input type="text" id="editCategoryIcon" name="categoryIcon" class="icon-input" placeholder="例如：📚" required>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="hideEditCategoryModal();">取消</button>
+                        <button type="submit">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- 添加网站弹窗 -->
     <div id="addWebsiteModal" class="modal" style="display: none;">
         <div class="modal-content">
@@ -190,11 +220,7 @@
                         <label for="websiteCategory">所属分类：</label>
                         <select id="websiteCategory" name="websiteCategory" required>
                             <option value="">请选择分类</option>
-                            <% categories.forEach(function(category) { %>
-                                <% if (category.name !== '全部') { %>
-                                    <option value="<%= category.name %>"><%= category.name %></option>
-                                <% } %>
-                            <% }); %>
+                            <!-- 分类选项将通过JavaScript动态生成 -->
                         </select>
                     </div>
                     <div class="form-group">
@@ -267,6 +293,8 @@
     <script src="/js/PasswordManager.js"></script>
     <script src="/js/DataManagerUI.js"></script>
     <script src="/js/StorageIntegration.js"></script>
+    <script src="/js/CategoryManager.js"></script>
+    <!-- EmojiPicker functionality is included in main.js --></script>
     
     <!-- 主应用脚本 -->
     <script src="/js/main.js"></script>

@@ -1281,7 +1281,7 @@ footer p + p {
   border: 1px solid #e1e5e9;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 10003;
   width: 320px;
   max-height: 400px;
   overflow: hidden;
@@ -1547,7 +1547,7 @@ footer p + p {
 }
 
 .modal-content {
-  background: #ffffff;
+  background: var(--card-bg, #ffffff);
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   max-width: 400px;
@@ -1557,6 +1557,7 @@ footer p + p {
   transform: scale(0.7) translateY(30px);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  border: 1px solid var(--border-color, #e5e7eb);
 }
 
 .custom-modal.show .modal-content {
@@ -1596,7 +1597,7 @@ footer p + p {
 
 .modal-header {
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1641,7 +1642,7 @@ footer p + p {
 .modal-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary, #1f2937);
   margin: 0;
 }
 
@@ -1650,7 +1651,7 @@ footer p + p {
 }
 
 .modal-message {
-  color: #4b5563;
+  color: var(--text-secondary, #4b5563);
   font-size: 14px;
   line-height: 1.5;
   margin: 0;
