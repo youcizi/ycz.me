@@ -128,23 +128,20 @@ const app = createApp({
         const selectCategory = (categoryData) => {
             console.log('选择分类:', categoryData);
             
-            // 处理分类ID和名称
-            let categoryId, categoryName;
+            // 处理分类数据，保持完整的category对象
             if (categoryData === null || categoryData === 'all') {
-                categoryId = null;
-                categoryName = '全部';
+                currentCategory.value = null;
             } else if (typeof categoryData === 'object' && categoryData.id) {
-                categoryId = categoryData.id;
-                categoryName = categoryData.name;
+                // 直接使用传入的category对象
+                currentCategory.value = categoryData;
             } else {
-                categoryId = categoryData;
+                // 如果传入的是ID，查找完整的category对象
                 const category = categories.value.find(c => c.id === categoryData);
-                categoryName = category ? category.name : '全部';
+                currentCategory.value = category || null;
             }
             
-            currentCategory.value = categoryId;
-            
             // 同步到NavigationApp（如果存在）
+            const categoryName = currentCategory.value ? currentCategory.value.name : '全部';
             if (window.navigationApp && typeof window.navigationApp.handleCategoryChangeFromEvent === 'function') {
                 window.navigationApp.handleCategoryChangeFromEvent(categoryName);
             }
@@ -253,7 +250,7 @@ const app = createApp({
                 await categoryManager.deleteCategory(categoryId);
                 
                 // 如果删除的是当前选中的分类，切换到全部
-                if (currentCategory.value === categoryId) {
+                if (currentCategory.value && currentCategory.value.id === categoryId) {
                     currentCategory.value = null;
                 }
                 
@@ -278,7 +275,7 @@ const app = createApp({
                 title: '',
                 url: '',
                 description: '',
-                categoryId: currentCategory.value || '',
+                categoryId: currentCategory.value ? currentCategory.value.id : '',
                 icon: '🌐',
                 paymentType: ''
             });
@@ -561,11 +558,12 @@ const app = createApp({
                 
                 // 按分类筛选
                 if (currentCategory.value) {
+                    const categoryId = currentCategory.value.id;
                     console.log('筛选前网站数量:', filtered.length);
-                    console.log('筛选条件 categoryId:', currentCategory.value);
+                    console.log('筛选条件 categoryId:', categoryId);
                     filtered = filtered.filter(website => {
-                        console.log('检查网站:', website.name, 'categoryId:', website.categoryId, '匹配:', website.categoryId === currentCategory.value);
-                        return website && website.categoryId === currentCategory.value;
+                        console.log('检查网站:', website.name, 'categoryId:', website.categoryId, '匹配:', website.categoryId === categoryId);
+                        return website && website.categoryId === categoryId;
                     });
                     console.log('分类筛选后:', filtered.length, '个网站');
                 }
@@ -760,6 +758,24 @@ const app = createApp({
             }
         };
         
+        // 侧边栏切换方法
+        const toggleSidebar = async () => {
+            try {
+                // 调用NavigationApp的toggleSidebar方法
+                if (window.navigationApp && typeof window.navigationApp.toggleSidebar === 'function') {
+                    await window.navigationApp.toggleSidebar();
+                } else {
+                    // 如果NavigationApp不可用，直接切换CSS类
+                    const sidebar = document.querySelector('.sidebar');
+                    if (sidebar) {
+                        sidebar.classList.toggle('collapsed');
+                    }
+                }
+            } catch (error) {
+                console.error('切换侧边栏失败:', error);
+            }
+        };
+        
         // 清理函数
         const cleanup = () => {
             console.log('清理应用资源');
@@ -859,7 +875,10 @@ const app = createApp({
             // 付费类型方法
             getPaymentTypeLabel,
             getPaymentTypeClass,
-            openWebsite
+            openWebsite,
+            
+            // 侧边栏方法
+            toggleSidebar
         };
     }
 });
