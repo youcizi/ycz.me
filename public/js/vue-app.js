@@ -73,7 +73,8 @@ const app = createApp({
             url: '',
             description: '',
             icon: '🌐',
-            categoryId: ''
+            categoryId: '',
+            paymentType: ''
         });
         
         // 图标数据
@@ -548,10 +549,14 @@ const app = createApp({
                     console.log('搜索筛选后:', filtered.length, '个网站');
                 }
                 
-                // 按类型筛选（这里可以根据实际需求扩展）
+                // 按付费类型筛选
                 if (currentFilter.value !== 'all') {
-                    // 这里可以根据网站的类型字段进行筛选
-                    // 暂时保持所有网站显示，可以后续根据数据结构调整
+                    filtered = filtered.filter(website => {
+                        if (!website) return false;
+                        const paymentType = website.paymentType || website.priceType || '';
+                        return paymentType === currentFilter.value;
+                    });
+                    console.log('付费类型筛选后:', filtered.length, '个网站');
                 }
                 
                 filteredWebsites.value = filtered;

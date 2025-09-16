@@ -266,8 +266,8 @@ class NavigationApp {
     let searchBase = [...this.allWebsites];
     if (this.currentFilter !== 'all') {
       searchBase = this.allWebsites.filter(website => {
-        const priceType = website.priceType || 'free';
-        return priceType === this.currentFilter;
+        const paymentType = website.paymentType || website.priceType || '';
+        return paymentType === this.currentFilter;
       });
     }
     
@@ -333,8 +333,8 @@ class NavigationApp {
     
     if (this.currentFilter !== 'all') {
       filteredWebsites = this.allWebsites.filter(website => {
-        const priceType = website.priceType || 'free'; // 默认为免费
-        return priceType === this.currentFilter;
+        const paymentType = website.paymentType || website.priceType || ''; // 兼容旧数据
+        return paymentType === this.currentFilter;
       });
     }
     

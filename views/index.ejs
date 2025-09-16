@@ -289,6 +289,16 @@
                         </button>
                     </div>
                 </div>
+                <div class="form-group">
+                    <label for="websitePaymentType">付费类型</label>
+                    <select id="websitePaymentType" v-model="websiteForm.paymentType">
+                        <option value="">请选择付费类型</option>
+                        <option value="free">免费</option>
+                        <option value="paid">付费</option>
+                        <option value="trial">试用</option>
+                        <option value="points">送积分</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @click="closeWebsiteModal">取消</button>
@@ -346,6 +356,16 @@
                             选择图标
                         </button>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label for="editWebsitePaymentType">付费类型</label>
+                    <select id="editWebsitePaymentType" v-model="websiteForm.paymentType">
+                        <option value="">请选择付费类型</option>
+                        <option value="free">免费</option>
+                        <option value="paid">付费</option>
+                        <option value="trial">试用</option>
+                        <option value="points">送积分</option>
+                    </select>
                 </div>
             </div>
             <div class="modal-footer">

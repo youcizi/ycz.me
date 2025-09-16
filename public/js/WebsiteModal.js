@@ -129,7 +129,7 @@ async function showEditWebsiteModal(websiteData) {
     }
     
     document.getElementById('websiteCategory').value = categoryValue;
-    document.getElementById('websitePriceType').value = website.priceType || 'free';
+    document.getElementById('websitePaymentType').value = website.paymentType || website.priceType || '';
     
     console.log('编辑表单数据填充:', {
       name: website.name,
@@ -249,7 +249,7 @@ async function fetchWebsiteDetails(websiteName) {
       document.getElementById('websiteUrl').value = website.url || '';
       document.getElementById('websiteIcon').value = website.icon || '';
       document.getElementById('websiteCategory').value = website.category || '';
-      document.getElementById('websitePriceType').value = website.priceType || 'free';
+      document.getElementById('websitePaymentType').value = website.paymentType || website.priceType || '';
       
       // 聚焦到网站名称输入框
       setTimeout(() => document.getElementById('websiteName').focus(), 100);
@@ -302,7 +302,7 @@ function initWebsiteModalEvents() {
         icon: formData.get('websiteIcon'),
         category: categoryName, // 保留category字段用于服务器端
         categoryId: categoryId, // 添加categoryId字段用于IndexedDB
-        priceType: formData.get('websitePriceType')
+        paymentType: formData.get('websitePaymentType')
       };
       
       console.log('表单提交 - 最终网站数据:', websiteData);

@@ -86,7 +86,7 @@ class Website {
         url: 'https://www.baidu.com',
         icon: '🔍',
         category: '搜索引擎',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_002',
@@ -95,7 +95,7 @@ class Website {
         url: 'https://www.google.com',
         icon: '🔍',
         category: '搜索引擎',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_003',
@@ -104,7 +104,7 @@ class Website {
         url: 'https://www.bing.com',
         icon: '🔍',
         category: '搜索引擎',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_004',
@@ -113,7 +113,7 @@ class Website {
         url: 'https://weibo.com',
         icon: '📱',
         category: '社交网络',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_005',
@@ -122,7 +122,7 @@ class Website {
         url: 'https://wx.qq.com',
         icon: '💬',
         category: '社交网络',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_006',
@@ -131,7 +131,7 @@ class Website {
         url: 'https://qzone.qq.com',
         icon: '⭐',
         category: '社交网络',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_007',
@@ -140,7 +140,7 @@ class Website {
         url: '#',
         icon: '✈️',
         category: '在线工具',
-        priceType: 'trial'
+        paymentType: 'trial'
       },
       {
         id: 'web_008',
@@ -149,7 +149,7 @@ class Website {
         url: 'https://mail.163.com',
         icon: '📧',
         category: '在线工具',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_009',
@@ -158,7 +158,7 @@ class Website {
         url: 'https://www.json.cn',
         icon: '🔧',
         category: '在线工具',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_010',
@@ -167,7 +167,7 @@ class Website {
         url: 'https://regex101.com',
         icon: '🔍',
         category: '在线工具',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_011',
@@ -176,7 +176,7 @@ class Website {
         url: 'https://base64.us',
         icon: '🔐',
         category: '在线工具',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_012',
@@ -185,7 +185,7 @@ class Website {
         url: 'https://www.taobao.com',
         icon: '🛍️',
         category: '购物网站',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_013',
@@ -194,7 +194,7 @@ class Website {
         url: 'https://www.jd.com',
         icon: '📦',
         category: '购物网站',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_014',
@@ -203,7 +203,7 @@ class Website {
         url: 'https://github.com',
         icon: '💻',
         category: '开发者工具',
-        priceType: 'paid'
+        paymentType: 'paid'
       },
       {
         id: 'web_015',
@@ -212,7 +212,7 @@ class Website {
         url: 'https://fanyi.youdao.com',
         icon: '🔤',
         category: '在线工具',
-        priceType: 'free'
+        paymentType: 'free'
       },
       {
         id: 'web_016',
@@ -221,7 +221,7 @@ class Website {
         url: 'https://pan.baidu.com',
         icon: '☁️',
         category: '在线工具',
-        priceType: 'points'
+        paymentType: 'points'
       },
       {
         id: 'web_017',
@@ -230,7 +230,7 @@ class Website {
         url: 'https://www.iqiyi.com',
         icon: '🎬',
         category: '娱乐休闲',
-        priceType: 'paid'
+        paymentType: 'paid'
       }
     ];
   }
@@ -301,7 +301,7 @@ class Website {
       url: website.url,
       icon: website.icon || '🌐',
       category: website.category,
-      priceType: website.priceType || 'free'
+      paymentType: website.paymentType || ''
     };
     this.websites.push(newWebsite);
     return newWebsite;
@@ -331,7 +331,7 @@ class Website {
         url: updatedWebsite.url,
         icon: updatedWebsite.icon || '🌐',
         category: updatedWebsite.category,
-        priceType: updatedWebsite.priceType || 'free'
+        paymentType: updatedWebsite.paymentType || ''
       };
       return true;
     }
