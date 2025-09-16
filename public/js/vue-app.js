@@ -424,28 +424,41 @@ const app = createApp({
             }
         };
         
-        const showIconSelector = (type) => {
-            console.log('显示图标选择器:', type);
+        const showIconSelector = (type, currentIcon) => {
+            console.log('显示图标选择器:', type, '当前图标:', currentIcon);
             initEmojiPicker();
             
-            // 设置选择回调
-            const callback = (selectedEmoji) => {
-                console.log('选择的emoji:', selectedEmoji);
-                if (selectedEmoji) {
-                    if (type === 'category') {
-                        categoryForm.icon = selectedEmoji;
-                        console.log('分类图标已更新:', categoryForm.icon);
-                    } else if (type === 'website') {
-                        websiteForm.icon = selectedEmoji;
-                        console.log('网站图标已更新:', websiteForm.icon);
-                    }
-                }
-            };
+            // 查找对应的input元素
+            let inputElement = null;
+            if (type === 'category') {
+                // 查找分类图标输入框
+                inputElement = document.querySelector('.category-modal .icon-preview-input');
+            } else if (type === 'website') {
+                // 查找网站图标输入框
+                inputElement = document.querySelector('.website-modal .icon-preview-input');
+            }
             
-            // 显示emoji选择器 - 修复参数传递问题
-            // EmojiIconPicker的show方法需要target和callback两个参数
-            const targetElement = document.activeElement || document.body;
-            emojiPicker.show(targetElement, callback);
+            if (inputElement) {
+                // 使用新的showForInput方法
+                EmojiIconPicker.showForInput(inputElement);
+            } else {
+                // 回退到原有方式
+                const callback = (selectedEmoji) => {
+                    console.log('选择的emoji:', selectedEmoji);
+                    if (selectedEmoji) {
+                        if (type === 'category') {
+                            categoryForm.icon = selectedEmoji;
+                            console.log('分类图标已更新:', categoryForm.icon);
+                        } else if (type === 'website') {
+                            websiteForm.icon = selectedEmoji;
+                            console.log('网站图标已更新:', websiteForm.icon);
+                        }
+                    }
+                };
+                
+                const targetElement = document.activeElement || document.body;
+                emojiPicker.show(targetElement, callback);
+            }
         };
         
         const closeIconSelector = () => {

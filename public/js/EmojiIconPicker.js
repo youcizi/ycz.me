@@ -264,10 +264,17 @@ class EmojiIconPicker {
         this.callback = callback;
         this.selectedEmoji = '';
         
+        // 如果target是input元素，获取当前值作为预选
+        if (target && target.value) {
+            this.selectedEmoji = target.value;
+        }
+        
         const picker = document.getElementById('emoji-icon-picker');
         if (picker) {
             picker.style.display = 'flex';
             document.body.style.overflow = 'hidden';
+            // 重新渲染以显示预选状态
+            this.renderEmojis();
         }
     }
     
@@ -284,8 +291,18 @@ class EmojiIconPicker {
     }
     
     confirmSelection() {
-        if (this.selectedEmoji && this.callback) {
-            this.callback(this.selectedEmoji);
+        if (this.selectedEmoji) {
+            // 如果目标是input元素，直接设置值
+            if (this.currentTarget && this.currentTarget.tagName === 'INPUT') {
+                this.currentTarget.value = this.selectedEmoji;
+                // 触发input事件以更新Vue绑定
+                const event = new Event('input', { bubbles: true });
+                this.currentTarget.dispatchEvent(event);
+            }
+            // 如果有回调函数，也调用它
+            if (this.callback) {
+                this.callback(this.selectedEmoji);
+            }
         }
         this.hide();
     }
@@ -296,6 +313,21 @@ class EmojiIconPicker {
             window.emojiIconPickerInstance = new EmojiIconPicker();
         }
         window.emojiIconPickerInstance.show(target, callback);
+    }
+    
+    // 新增：为input元素显示选择器的便捷方法
+    static showForInput(inputElement) {
+        if (!inputElement || inputElement.tagName !== 'INPUT') {
+            console.error('showForInput requires an input element');
+            return;
+        }
+        
+        EmojiIconPicker.show(inputElement, (emoji) => {
+            inputElement.value = emoji;
+            // 触发input事件以更新Vue绑定
+            const event = new Event('input', { bubbles: true });
+            inputElement.dispatchEvent(event);
+        });
     }
 }
 

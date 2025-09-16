@@ -1466,6 +1466,28 @@ footer p + p {
   background: #f9fafb;
 }
 
+.icon-preview-input {
+  font-size: 18px;
+  width: 60px;
+  height: 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.icon-preview-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.icon-preview-input::placeholder {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
 .icon-picker-btn {
   padding: 8px 16px;
   background: #f3f4f6;
