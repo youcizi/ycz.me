@@ -375,6 +375,7 @@ class IndexedDBService {
                 categoryId: website.categoryId,
                 icon: website.icon || '',
                 description: website.description || '',
+                paymentType: website.paymentType || '',
                 order: website.order || 0,
                 createdAt: website.createdAt || new Date().toISOString(),
                 updatedAt: new Date().toISOString()
@@ -394,8 +395,19 @@ class IndexedDBService {
     /**
      * 更新网站
      */
-    async updateWebsite(website) {
+    async updateWebsite(websiteIdOrWebsite, websiteData = null) {
         try {
+            let website;
+            
+            // 兼容两种调用方式：updateWebsite(website) 或 updateWebsite(id, websiteData)
+            if (typeof websiteIdOrWebsite === 'string' && websiteData) {
+                // 第二种方式：updateWebsite(id, websiteData)
+                website = { ...websiteData, id: websiteIdOrWebsite };
+            } else {
+                // 第一种方式：updateWebsite(website)
+                website = websiteIdOrWebsite;
+            }
+            
             if (!website || !website.id) {
                 throw new Error('网站ID不能为空');
             }
@@ -438,6 +450,7 @@ class IndexedDBService {
                 ...website,
                 name: website.name.trim(),
                 url: website.url.trim(),
+                paymentType: website.paymentType || existingWebsite.paymentType || '',
                 updatedAt: new Date().toISOString()
             };
 

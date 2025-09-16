@@ -148,18 +148,24 @@
                         :key="website.id"
                         class="website-card" 
                         :data-website-id="website.id"
+                        @click="openWebsite(website.url)"
                     >
-                        <div class="card-header">
-                            <span class="website-icon">{{ website.icon }}</span>
-                            <div class="card-actions">
-                                <button @click="showEditWebsiteModal(website)" class="edit-btn">✏️</button>
-                                <button @click="deleteWebsite(website.id)" class="delete-btn">🗑️</button>
-                            </div>
+                        <!-- 付费类型标识 -->
+                        <div v-if="website.paymentType" 
+                             class="payment-type-badge" 
+                             :class="getPaymentTypeClass(website.paymentType)">
+                            {{ getPaymentTypeLabel(website.paymentType) }}
                         </div>
-                        <div class="card-content">
-                            <h3 class="website-title">{{ website.title }}</h3>
+                        
+                        <div class="website-icon">{{ website.icon }}</div>
+                        <div class="website-info">
+                            <h3 class="website-name">{{ website.title || website.name }}</h3>
                             <p class="website-description">{{ website.description }}</p>
-                            <a :href="website.url" target="_blank" class="website-url">{{ website.url }}</a>
+                        </div>
+                        
+                        <div class="card-actions">
+                            <button @click.stop="showEditWebsiteModal(website)" class="action-icon edit-icon">✏️</button>
+                            <button @click.stop="deleteWebsite(website.id)" class="action-icon delete-icon">🗑️</button>
                         </div>
                     </div>
                 </div>

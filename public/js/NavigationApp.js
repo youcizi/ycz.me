@@ -477,7 +477,7 @@ class NavigationApp {
     
     const html = websites.map(website => {
       // 获取价格类型标签信息
-      const priceTypeInfo = this.getPriceTypeInfo(website.priceType || 'free');
+      const priceTypeInfo = this.getPriceTypeInfo(website.paymentType || website.priceType || 'free');
       
       return `
         <div class="website-card" onclick="window.open('${website.url}', '_blank')">

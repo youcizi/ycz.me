@@ -600,6 +600,106 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+/* 付费类型标识 */
+.payment-type-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 免费类型 - 绿色 */
+.payment-type-free {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* 付费类型 - 橙色 */
+.payment-type-paid {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+/* 试用类型 - 蓝色 */
+.payment-type-trial {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* 送积分类型 - 紫色 */
+.payment-type-points {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+/* 卡片悬停时付费类型标识效果 */
+.website-card:hover .payment-type-badge {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 响应式设计 - 付费类型标识 */
+@media (max-width: 768px) {
+  .payment-type-badge {
+    top: 8px;
+    left: 8px;
+    padding: 3px 6px;
+    font-size: 10px;
+    border-radius: 10px;
+  }
+  
+  .website-card {
+    min-height: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .payment-type-badge {
+    top: 6px;
+    left: 6px;
+    padding: 2px 5px;
+    font-size: 9px;
+    border-radius: 8px;
+  }
+  
+  .website-card {
+    min-height: 120px;
+  }
+  
+  .websites-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 320px) {
+  .payment-type-badge {
+    top: 4px;
+    left: 4px;
+    padding: 2px 4px;
+    font-size: 8px;
+    border-radius: 6px;
+  }
+  
+  .website-card {
+    min-height: 100px;
+  }
+  
+  .websites-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+}
+
 /* 加载状态 */
 .loading {
   text-align: center;

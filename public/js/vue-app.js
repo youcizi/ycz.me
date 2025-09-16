@@ -256,7 +256,8 @@ const app = createApp({
                 url: '',
                 description: '',
                 categoryId: currentCategory.value || '',
-                icon: '🌐'
+                icon: '🌐',
+                paymentType: ''
             });
             editingWebsite.value = null;
             
@@ -297,7 +298,8 @@ const app = createApp({
                 url: '',
                 description: '',
                 categoryId: '',
-                icon: '🌐'
+                icon: '🌐',
+                paymentType: ''
             });
             editingWebsite.value = null;
             
@@ -329,11 +331,13 @@ const app = createApp({
                 isLoading.value = true;
                 
                 const websiteData = {
-                    title: websiteForm.title.trim(),
+                    name: websiteForm.title.trim(), // 使用name字段以保持与IndexedDB一致
+                    title: websiteForm.title.trim(), // 保留title字段用于兼容性
                     url: websiteForm.url.trim(),
                     description: websiteForm.description.trim(),
                     categoryId: websiteForm.categoryId,
-                    icon: websiteForm.icon
+                    icon: websiteForm.icon,
+                    paymentType: websiteForm.paymentType || '' // 添加paymentType字段
                 };
                 
                 if (editingWebsite.value) {
@@ -695,6 +699,33 @@ const app = createApp({
             }
         };
         
+        // 付费类型相关方法
+        const getPaymentTypeLabel = (paymentType) => {
+            const labels = {
+                'free': '免费',
+                'paid': '付费',
+                'trial': '试用',
+                'points': '送积分'
+            };
+            return labels[paymentType] || '';
+        };
+        
+        const getPaymentTypeClass = (paymentType) => {
+            const classes = {
+                'free': 'payment-type-free',
+                'paid': 'payment-type-paid',
+                'trial': 'payment-type-trial',
+                'points': 'payment-type-points'
+            };
+            return classes[paymentType] || '';
+        };
+        
+        const openWebsite = (url) => {
+            if (url) {
+                window.open(url, '_blank');
+            }
+        };
+        
         // 清理函数
         const cleanup = () => {
             console.log('清理应用资源');
@@ -789,7 +820,12 @@ const app = createApp({
             
             // 工具方法
             loadData,
-            cleanup
+            cleanup,
+            
+            // 付费类型方法
+            getPaymentTypeLabel,
+            getPaymentTypeClass,
+            openWebsite
         };
     }
 });
