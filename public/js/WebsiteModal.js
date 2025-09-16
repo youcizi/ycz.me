@@ -55,27 +55,35 @@ async function showEditWebsiteModal(websiteData) {
   const form = document.getElementById('addWebsiteForm');
   
   if (modal && form) {
-    // 如果传入的是字符串（网站名称），则需要获取完整数据
+    let website;
+    
+    // 如果传入的是字符串（网站名称），从本地IndexedDB获取完整数据
     if (typeof websiteData === 'string') {
-      const websiteName = websiteData;
-      form.dataset.editMode = 'true';
-      form.dataset.originalName = websiteName;
-      
-      // 更新弹窗标题和按钮
-      const modalTitle = modal.querySelector('.modal-title');
-      if (modalTitle) modalTitle.textContent = '编辑网站';
-      
-      const submitBtn = modal.querySelector('button[type="submit"]');
-      if (submitBtn) submitBtn.textContent = '保存修改';
-      
-      updateCategorySelector();
-      modal.style.display = 'flex';
-      fetchWebsiteDetails(websiteName);
-      return;
+      const app = window.navigationApp;
+      if (app && app.navigationDB) {
+        try {
+          const websites = await app.navigationDB.getWebsites();
+          website = websites.find(w => w.name === websiteData);
+          if (!website) {
+            console.error('未找到网站:', websiteData);
+            utils.showToast('未找到要编辑的网站', 'error');
+            return;
+          }
+        } catch (error) {
+          console.error('从IndexedDB获取网站数据失败:', error);
+          utils.showToast('获取网站信息失败', 'error');
+          return;
+        }
+      } else {
+        console.error('NavigationDB实例不可用');
+        utils.showToast('数据库未初始化', 'error');
+        return;
+      }
+    } else {
+      // 如果传入的是对象，直接使用
+      website = websiteData;
     }
     
-    // 如果传入的是网站对象，直接填充数据
-    const website = websiteData;
     console.log('编辑网站数据:', website);
     
     // 设置编辑模式标记
