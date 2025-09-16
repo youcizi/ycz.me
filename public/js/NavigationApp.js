@@ -735,18 +735,31 @@ class NavigationApp {
   // 切换侧边栏状态
   async toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
-    const isCollapsed = sidebar.classList.toggle('collapsed');
     
-    // 保存状态到IndexedDB
-    try {
-      if (this.navigationDB) {
-        const settings = await this.navigationDB.getSettings() || { id: 'main' };
-        settings.sidebarCollapsed = isCollapsed;
-        settings.updatedAt = Date.now();
-        await this.navigationDB._updateSettings(settings);
+    // 检测是否为移动端
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+      // 移动端：切换mobile-open类
+      const isMobileOpen = sidebar.classList.toggle('mobile-open');
+      
+      // 移动端不需要保存collapsed状态，因为默认就是收缩的
+      // 只有在展开时才需要特殊处理
+    } else {
+      // PC端：切换collapsed类
+      const isCollapsed = sidebar.classList.toggle('collapsed');
+      
+      // 保存状态到IndexedDB
+      try {
+        if (this.navigationDB) {
+          const settings = await this.navigationDB.getSettings() || { id: 'main' };
+          settings.sidebarCollapsed = isCollapsed;
+          settings.updatedAt = Date.now();
+          await this.navigationDB._updateSettings(settings);
+        }
+      } catch (error) {
+        // 保存侧边栏状态失败
       }
-    } catch (error) {
-      // 保存侧边栏状态失败
     }
   }
   

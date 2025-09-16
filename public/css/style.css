@@ -776,30 +776,140 @@ footer p + p {
 /* 响应式设计 */
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%);
+    width: 70px;
+    transform: translateX(0);
     z-index: 1000;
   }
   
   .sidebar.collapsed {
-    transform: translateX(-100%);
+    width: 70px;
+    transform: translateX(0);
   }
   
   .sidebar.mobile-open {
+    width: 280px;
     transform: translateX(0);
   }
   
   .main-content {
-    margin-left: 0;
+    margin-left: 70px;
     padding: 10px;
   }
   
   .sidebar.collapsed ~ .main-content {
-    margin-left: 0;
+    margin-left: 70px;
+  }
+  
+  .sidebar.mobile-open ~ .main-content {
+    margin-left: 280px;
   }
   
   footer {
-    margin-left: 0;
+    margin-left: 70px;
     padding: 30px 20px;
+  }
+  
+  .sidebar.mobile-open ~ .main-content footer {
+    margin-left: 280px;
+  }
+  
+  /* 移动端默认收缩状态样式 */
+  .sidebar .nav-text {
+    display: none;
+  }
+  
+  .sidebar .nav-item {
+    padding: 8px;
+    justify-content: center;
+    height: auto;
+    min-height: 48px; /* 增加触摸区域 */
+    touch-action: manipulation; /* 优化触摸响应 */
+  }
+  
+  .sidebar .nav-item.active {
+    border-right: none;
+    border-bottom: 3px solid #4f46e5;
+    background: #f3f4f6;
+  }
+  
+  .sidebar .sidebar-logo {
+    padding: 24px 12px;
+    justify-content: center;
+    min-height: 48px; /* 增加触摸区域 */
+  }
+  
+  .sidebar .logo-text,
+  .sidebar .logo-subtitle {
+    display: none;
+  }
+  
+  /* 展开状态恢复正常样式 */
+  .sidebar.mobile-open .nav-text {
+    display: block;
+  }
+  
+  .sidebar.mobile-open .nav-item {
+    padding: 12px 20px;
+    justify-content: flex-start;
+    height: auto;
+    min-height: 48px;
+  }
+  
+  .sidebar.mobile-open .nav-item.active {
+    border-right: 3px solid #4f46e5;
+    border-bottom: none;
+  }
+  
+  .sidebar.mobile-open .sidebar-logo {
+    padding: 24px 20px;
+    justify-content: flex-start;
+    min-height: 48px;
+  }
+  
+  .sidebar.mobile-open .logo-text,
+  .sidebar.mobile-open .logo-subtitle {
+    display: block;
+  }
+  
+  /* 优化sidebar-toggle按钮的触摸体验 */
+  .sidebar-toggle {
+    min-width: 32px;
+    min-height: 32px;
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    top: 16px;
+    right: -12px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* 添加触摸反馈 */
+  .sidebar .nav-item:active,
+  .sidebar-toggle:active {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(0.98);
+  }
+  
+  /* 移动端hover效果调整 */
+  @media (hover: none) {
+    .sidebar .nav-item:hover {
+      background-color: transparent;
+    }
+  }
+  
+  /* 移动端编辑删除按钮位置调整 */
+  .nav-actions {
+    right: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    padding: 2px;
+  }
+  
+  .nav-actions .action-icon {
+    padding: 4px 6px;
+    font-size: 14px;
+    border-radius: 2px;
   }
   
   .top-bar {
@@ -1088,24 +1198,97 @@ footer p + p {
 
 @media (max-width: 480px) {
   .sidebar {
-    width: 100%;
-    position: fixed;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 2000;
+    width: 70px;
+    transform: translateX(0);
+    z-index: 1000;
   }
   
-  .sidebar.open {
+  .sidebar.collapsed {
+    width: 70px;
+    transform: translateX(0);
+  }
+  
+  .sidebar.mobile-open {
+    width: 280px;
     transform: translateX(0);
   }
   
   .main-content {
-    margin-left: 0;
+    margin-left: 70px;
+  }
+  
+  .sidebar.collapsed ~ .main-content {
+    margin-left: 70px;
+  }
+  
+  .sidebar.mobile-open ~ .main-content {
+    margin-left: 280px;
   }
   
   footer {
-    margin-left: 0;
+    margin-left: 70px;
     padding: 25px 16px;
+  }
+  
+  .sidebar.mobile-open ~ .main-content footer {
+    margin-left: 280px;
+  }
+  
+  /* 移动端默认收缩状态样式 */
+  .sidebar .nav-text {
+    display: none;
+  }
+  
+  .sidebar .nav-item {
+    padding: 8px;
+    justify-content: center;
+    height: auto;
+    min-height: 48px;
+    touch-action: manipulation;
+  }
+  
+  .sidebar .nav-item.active {
+    border-right: none;
+    border-bottom: 3px solid #4f46e5;
+    background: #f3f4f6;
+  }
+  
+  .sidebar .sidebar-logo {
+    padding: 24px 12px;
+    justify-content: center;
+    min-height: 48px;
+  }
+  
+  .sidebar .logo-text,
+  .sidebar .logo-subtitle {
+    display: none;
+  }
+  
+  /* 展开状态恢复正常样式 */
+  .sidebar.mobile-open .nav-text {
+    display: block;
+  }
+  
+  .sidebar.mobile-open .nav-item {
+    padding: 12px 20px;
+    justify-content: flex-start;
+    height: auto;
+    min-height: 48px;
+  }
+  
+  .sidebar.mobile-open .nav-item.active {
+    border-right: 3px solid #4f46e5;
+    border-bottom: none;
+  }
+  
+  .sidebar.mobile-open .sidebar-logo {
+    padding: 24px 20px;
+    justify-content: flex-start;
+  }
+  
+  .sidebar.mobile-open .logo-text,
+  .sidebar.mobile-open .logo-subtitle {
+    display: block;
   }
   
   .top-bar {
