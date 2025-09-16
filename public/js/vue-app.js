@@ -402,14 +402,18 @@ const app = createApp({
                 if (selectedEmoji) {
                     if (type === 'category') {
                         categoryForm.icon = selectedEmoji;
+                        console.log('分类图标已更新:', categoryForm.icon);
                     } else if (type === 'website') {
                         websiteForm.icon = selectedEmoji;
+                        console.log('网站图标已更新:', websiteForm.icon);
                     }
                 }
             };
             
-            // 显示emoji选择器
-            emojiPicker.show(callback);
+            // 显示emoji选择器 - 修复参数传递问题
+            // EmojiIconPicker的show方法需要target和callback两个参数
+            const targetElement = document.activeElement || document.body;
+            emojiPicker.show(targetElement, callback);
         };
         
         const closeIconSelector = () => {
