@@ -597,7 +597,7 @@ class DataManagerUI {
     async handleRestore(backupId) {
         if (this.isLoading) return;
         
-        const confirmed = confirm('恢复备份将替换当前所有数据，此操作不可撤销。确定要继续吗？');
+        const confirmed = await CustomModal.showConfirm('恢复备份将替换当前所有数据，此操作不可撤销。确定要继续吗？');
         if (!confirmed) return;
         
         try {
@@ -622,7 +622,7 @@ class DataManagerUI {
     async handleDeleteBackup(backupId) {
         if (this.isLoading) return;
         
-        const confirmed = confirm('确定要删除这个备份吗？此操作不可撤销。');
+        const confirmed = await CustomModal.showConfirm('确定要删除这个备份吗？此操作不可撤销。');
         if (!confirmed) return;
         
         try {
@@ -902,7 +902,7 @@ class DataManagerUI {
         if (typeof CustomModal !== 'undefined') {
             CustomModal.showSuccess(message);
         } else {
-            alert(message);
+            console.warn('CustomModal not available, message:', message);
         }
     }
     
@@ -914,7 +914,7 @@ class DataManagerUI {
         if (typeof CustomModal !== 'undefined') {
             CustomModal.showError(message);
         } else {
-            alert(message);
+            console.error('CustomModal not available, error:', message);
         }
     }
     

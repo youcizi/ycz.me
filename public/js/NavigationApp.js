@@ -164,7 +164,7 @@ class NavigationApp {
     button.textContent = '清除本地数据(测试用)';
     button.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;padding:5px 10px;background:#ff4444;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;';
     button.onclick = async () => {
-      if (confirm('确定要清除所有本地数据吗？这将强制从服务器重新加载数据。')) {
+      if (await CustomModal.showConfirm('确定要清除所有本地数据吗？这将强制从服务器重新加载数据。')) {
         await this.clearAllLocalData();
         location.reload();
       }
@@ -643,7 +643,7 @@ class NavigationApp {
       });
     } else {
       // 降级到原生confirm
-      if (confirm(`确定要删除网站 "${websiteName}" 吗？`)) {
+      if (await CustomModal.showConfirm(`确定要删除网站 "${websiteName}" 吗？`)) {
         try {
           const result = await this.deleteWebsite(websiteName);
           if (result) {

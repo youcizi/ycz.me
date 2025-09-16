@@ -218,7 +218,7 @@ const app = createApp({
         };
         
         const deleteCategory = async (categoryId) => {
-            if (!confirm('确定要删除这个分类吗？删除后该分类下的所有网站也会被删除。')) {
+            if (!await CustomModal.showConfirm('确定要删除这个分类吗？删除后该分类下的所有网站也会被删除。')) {
                 return;
             }
             
@@ -360,7 +360,7 @@ const app = createApp({
         };
         
         const deleteWebsite = async (websiteId) => {
-            if (!confirm('确定要删除这个网站吗？')) {
+            if (!await CustomModal.showConfirm('确定要删除这个网站吗？')) {
                 return;
             }
             
