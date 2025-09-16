@@ -3,13 +3,39 @@
  * 负责处理分类的增删改查和UI交互
  */
 class CategoryManager {
-    constructor(navigationDB, storageIntegration) {
+    constructor(navigationDB, storageIntegration, eventBus = null) {
         this.navigationDB = navigationDB;
         this.storage = storageIntegration;
+        this.eventBus = eventBus || this.createSimpleEventBus();
         this.categories = [];
         this.currentEditingCategory = null;
         this.draggedCategory = null;
         this.init();
+    }
+
+    /**
+     * 创建简单的事件总线
+     */
+    createSimpleEventBus() {
+        const listeners = {};
+        return {
+            emit: (event, data) => {
+                if (listeners[event]) {
+                    listeners[event].forEach(callback => callback(data));
+                }
+            },
+            on: (event, callback) => {
+                if (!listeners[event]) {
+                    listeners[event] = [];
+                }
+                listeners[event].push(callback);
+            },
+            off: (event, callback) => {
+                if (listeners[event]) {
+                    listeners[event] = listeners[event].filter(cb => cb !== callback);
+                }
+            }
+        };
     }
 
     /**
@@ -24,10 +50,28 @@ class CategoryManager {
      * 绑定事件
      */
     bindEvents() {
-        // 添加分类按钮事件
-        const addCategoryBtn = document.querySelector('.add-category-btn');
-        if (addCategoryBtn) {
-            addCategoryBtn.addEventListener('click', () => this.showAddCategoryModal());
+        // 使用事件委托处理分类按钮点击
+        const sidebarNav = document.querySelector('.sidebar-nav');
+        if (sidebarNav) {
+            sidebarNav.addEventListener('click', (e) => {
+                const categoryItem = e.target.closest('.nav-item');
+                if (categoryItem) {
+                    // 如果是添加分类按钮
+                    if (categoryItem.classList.contains('add-category-btn')) {
+                        this.showAddCategoryModal();
+                        return;
+                    }
+                    
+                    // 如果点击的不是操作按钮区域，处理分类切换
+                    if (!e.target.closest('.nav-actions')) {
+                        const categoryName = categoryItem.getAttribute('data-category');
+                        const categoryId = categoryItem.getAttribute('data-category-id');
+                        if (categoryName) {
+                            this.handleCategoryClick({ name: categoryName, id: categoryId });
+                        }
+                    }
+                }
+            });
         }
 
         // 分类右键菜单事件
@@ -114,27 +158,72 @@ class CategoryManager {
      */
     async loadCategories() {
         try {
-            // 从NavigationDB中加载分类
+            // 从NavigationDB获取
             if (this.navigationDB) {
-                this.categories = await this.navigationDB.getCategories();
-            } else {
-                // 回退到localStorage
-                const cachedCategories = localStorage.getItem('nav_categories');
-                this.categories = cachedCategories ? JSON.parse(cachedCategories) : [];
+                const categories = await this.navigationDB.getCategories();
+                if (categories && categories.length > 0) {
+                    this.categories = categories;
+                    this.renderCategories();
+                    return;
+                }
+                
+                // 如果IndexedDB中没有分类数据，尝试从服务器获取
+                await this.loadCategoriesFromServer();
+                return;
             }
-            this.renderCategories(this.categories);
+            
+            // 如果NavigationDB不可用，显示空状态
+            this.categories = [];
+            this.renderCategories();
         } catch (error) {
-            console.error('加载分类失败:', error);
-            CustomModal.showError('加载分类失败');
+            // 加载分类失败
+            this.categories = [];
+            this.renderCategories();
+        }
+    }
+
+    /**
+     * 从服务器加载分类数据
+     */
+    async loadCategoriesFromServer() {
+        try {
+            const response = await fetch('/api/categories');
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                this.categories = data.data;
+                this.renderCategories();
+                
+                // 将分类数据存储到IndexedDB
+                if (this.navigationDB && data.data.length > 0) {
+                    try {
+                        await this.navigationDB.saveCategories(data.data);
+                        // 分类数据已存储到IndexedDB
+                    } catch (error) {
+                        // 存储分类数据到IndexedDB失败
+                    }
+                }
+            } else {
+                // 从服务器获取分类数据失败
+                this.categories = [];
+                this.renderCategories();
+            }
+        } catch (error) {
+            // 从服务器加载分类数据失败
+            this.categories = [];
+            this.renderCategories();
         }
     }
 
     /**
      * 渲染分类列表
      */
-    renderCategories(categories) {
+    renderCategories(categories = null) {
         const sidebarNav = document.querySelector('.sidebar-nav');
         if (!sidebarNav) return;
+
+        // 使用传入的categories或实例的categories
+        const categoriesToRender = categories || this.categories || [];
 
         // 保留添加分类按钮
         const addCategoryBtn = sidebarNav.querySelector('.add-category-btn');
@@ -143,7 +232,7 @@ class CategoryManager {
         sidebarNav.innerHTML = '';
         
         // 渲染分类项
-        categories.forEach(category => {
+        categoriesToRender.forEach(category => {
             const categoryElement = this.createCategoryElement(category);
             sidebarNav.appendChild(categoryElement);
         });
@@ -160,7 +249,9 @@ class CategoryManager {
     createCategoryElement(category) {
         const categoryElement = document.createElement('button');
         categoryElement.className = `nav-item ${category.active ? 'active' : ''}`;
+        // 优先设置data-category属性以与EJS模板保持一致
         categoryElement.setAttribute('data-category', category.name);
+        // 保留data-category-id作为备用标识
         categoryElement.setAttribute('data-category-id', category.id);
         categoryElement.setAttribute('draggable', 'true');
         categoryElement.type = 'button';
@@ -359,20 +450,9 @@ class CategoryManager {
                     CustomModal.showSuccess('分类添加成功');
                 }
             } else {
-                // 回退到localStorage
-                if (this.currentEditingCategory) {
-                    const index = this.categories.findIndex(cat => cat.id === this.currentEditingCategory.id);
-                    if (index !== -1) {
-                        this.categories[index] = { ...this.categories[index], ...categoryData };
-                    }
-                    CustomModal.showSuccess('分类更新成功');
-                } else {
-                    categoryData.id = Date.now().toString();
-                    this.categories.push(categoryData);
-                    CustomModal.showSuccess('分类添加成功');
-                }
-                localStorage.setItem('nav_categories', JSON.stringify(this.categories));
-                result = categoryData;
+                // 如果NavigationDB不可用，显示错误
+                CustomModal.showError('数据库不可用，无法保存分类');
+                return;
             }
             
             this.hideCategoryModal();
@@ -384,7 +464,7 @@ class CategoryManager {
             }
             
         } catch (error) {
-            console.error('保存分类失败:', error);
+            // 保存分类失败
             CustomModal.showError('保存分类失败');
         }
     }
@@ -401,13 +481,6 @@ class CategoryManager {
             if (this.navigationDB) {
                 websites = await this.navigationDB.getWebsites();
                 categoryWebsites = websites.filter(site => site.category === category.name);
-            } else {
-                // 从localStorage检查
-                const cachedWebsites = localStorage.getItem('nav_websites');
-                if (cachedWebsites) {
-                    websites = JSON.parse(cachedWebsites);
-                    categoryWebsites = websites.filter(site => site.category === category.name);
-                }
             }
             
             if (categoryWebsites.length > 0) {
@@ -426,14 +499,6 @@ class CategoryManager {
                             category: '未分类'
                         });
                     }
-                } else {
-                    // 更新localStorage中的网站
-                    websites.forEach(site => {
-                        if (site.category === category.name) {
-                            site.category = '未分类';
-                        }
-                    });
-                    localStorage.setItem('nav_websites', JSON.stringify(websites));
                 }
             } else {
                 const confirmed = await CustomModal.showConfirm(
@@ -447,9 +512,6 @@ class CategoryManager {
             // 删除分类
             if (this.navigationDB) {
                 await this.navigationDB.deleteCategory(category.id);
-            } else {
-                this.categories = this.categories.filter(cat => cat.id !== category.id);
-                localStorage.setItem('nav_categories', JSON.stringify(this.categories));
             }
             
             CustomModal.showSuccess('分类删除成功');
@@ -461,7 +523,7 @@ class CategoryManager {
             }
             
         } catch (error) {
-            console.error('删除分类失败:', error);
+            // 删除分类失败
             CustomModal.showError('删除分类失败');
         }
     }
@@ -470,21 +532,22 @@ class CategoryManager {
      * 处理分类点击
      */
     handleCategoryClick(category) {
-        // 更新活跃状态
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
+        // 移除所有分类的active类（排除添加分类按钮）
+        const categoryButtons = document.querySelectorAll('.nav-item:not(.add-category-btn)');
+        categoryButtons.forEach(btn => btn.classList.remove('active'));
         
-        const categoryElement = document.querySelector(`[data-category-id="${category.id}"]`);
-        if (categoryElement) {
-            categoryElement.classList.add('active');
+        // 获取分类名称（如果传入的是对象，取name属性；如果是字符串，直接使用）
+        const categoryName = typeof category === 'object' ? category.name : category;
+        
+        // 为当前分类添加active类（确保不是添加分类按钮）
+        const currentButton = document.querySelector(`[data-category="${categoryName}"]:not(.add-category-btn)`) || 
+                             document.querySelector(`[data-category-id="${category.id || category}"]:not(.add-category-btn)`);
+        if (currentButton) {
+            currentButton.classList.add('active');
         }
         
-        // 触发分类切换事件
-        if (window.navigationApp) {
-            window.navigationApp.currentCategory = category.name;
-            window.navigationApp.loadWebsites(category.name);
-        }
+        // 触发分类切换事件，传递分类名称
+        this.eventBus.emit('categoryChanged', categoryName);
     }
 
     /**
@@ -527,7 +590,7 @@ class CategoryManager {
             await this.loadCategories();
             
         } catch (error) {
-            console.error('分类排序失败:', error);
+            // 分类排序失败
             CustomModal.showError('分类排序失败');
         }
     }
@@ -547,7 +610,7 @@ class CategoryManager {
                 await adapter.updateCategory(updatedCategory);
             }
         } catch (error) {
-            console.error('重新整理分类排序失败:', error);
+            // 重新整理分类排序失败
         }
     }
 

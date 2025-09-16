@@ -96,7 +96,7 @@ async function deleteCategory(categoryName) {
           utils.showToast('未找到该分类', 'error');
         }
       } catch (error) {
-        console.error('删除分类错误:', error);
+        // 删除分类错误
         utils.showToast('删除分类失败，请稍后重试', 'error');
       }
     } else {
@@ -124,7 +124,7 @@ function initCategoryModalEvents() {
       
       // 这里可以添加提交到后端的逻辑
       utils.showToast(`添加分类 "${categoryName}" 功能开发中...`, 'info');
-      console.log('添加分类:', { name: categoryName, icon: categoryIcon });
+      // 添加分类: name, icon
       
       // 关闭弹窗
       hideAddCategoryModal();
@@ -149,7 +149,7 @@ function initCategoryModalEvents() {
       
       // 这里可以添加提交到后端的逻辑
       utils.showToast(`编辑分类 "${categoryName}" 功能开发中...`, 'info');
-      console.log('编辑分类:', { originalName, name: categoryName, icon: categoryIcon });
+      // 编辑分类: originalName, name, icon
       
       // 关闭弹窗
       hideEditCategoryModal();

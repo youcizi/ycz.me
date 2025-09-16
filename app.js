@@ -27,7 +27,7 @@ app.on('error', (err, ctx) => {
   console.error('服务器错误:', err);
 });
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 9999;
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
 });

@@ -10,16 +10,27 @@
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🧭%3C/text%3E%3C/svg%3E">
     
+    <!-- Vue3 和 Axios CDN - 优先加载 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    
     <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/category-manager.css">
+    
+    <!-- v-cloak 样式防止模板闪烁 -->
+    <style>
+        [v-cloak] {
+            display: none !important;
+        }
+    </style>
     
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
 </head>
 <body>
-    <!-- 整体布局容器 -->
-    <div class="app-container">
+    <!-- Vue3 应用根元素 -->
+    <div id="app" class="app-container" v-cloak>
         <!-- 左侧边栏 -->
         <aside class="sidebar">
             <!-- 收缩/展开按钮 -->
@@ -38,22 +49,34 @@
             
             <!-- 分类导航 -->
             <nav class="sidebar-nav" role="navigation" aria-label="网站分类">
-                <% categories.forEach(function(category, index) { %>
-                    <button 
-                        class="nav-item <%= category.active ? 'active' : '' %>" 
-                        data-category="<%= category.name %>"
-                        type="button"
-                    >
-                        <span class="nav-icon"><%= category.icon %></span>
-                        <span class="nav-text"><%= category.name %></span>
-                        <div class="nav-actions">
-                            <span class="action-icon edit-category" onclick="event.stopPropagation(); editCategory('<%= category.name %>');">✏️</span>
-                            <span class="action-icon delete-category" onclick="event.stopPropagation(); deleteCategory('<%= category.name %>');">🗑️</span>
-                        </div>
-                    </button>
-                <% }); %>
+                <button 
+                    class="nav-item" 
+                    :class="{ active: !currentCategory }"
+                    type="button"
+                    @click="selectCategory(null)"
+                >
+                    <span class="nav-icon">📁</span>
+                    <span class="nav-text">全部</span>
+                </button>
+                <button 
+                    v-for="category in categories" 
+                    :key="category.id"
+                    class="nav-item" 
+                    :class="{ active: currentCategory?.id === category.id }"
+                    :data-category="category.name"
+                    :data-category-id="category.id"
+                    type="button"
+                    @click="selectCategory(category)"
+                >
+                    <span class="nav-icon">{{ category.icon }}</span>
+                    <span class="nav-text">{{ category.name }}</span>
+                    <div class="nav-actions">
+                        <span class="action-icon edit-category" @click.stop="showEditCategoryModal(category)">✏️</span>
+                        <span class="action-icon delete-category" @click.stop="deleteCategory(category.id)">🗑️</span>
+                    </div>
+                </button>
                 <!-- 添加分类按钮 -->
-                <button class="nav-item add-category-btn" type="button">
+                <button class="nav-item add-category-btn" type="button" @click="showAddCategoryModal">
                     <span class="nav-icon">➕</span>
                     <span class="nav-text">添加分类</span>
                 </button>
@@ -73,7 +96,7 @@
                 
                 <!-- 右侧添加网站按钮 -->
                 <div class="top-actions">
-                    <button class="add-website-btn" type="button" aria-label="添加网站">
+                    <button class="add-website-btn" type="button" aria-label="添加网站" @click="showAddWebsiteModal">
                         <span class="add-icon">➕</span>
                         <span class="add-text">添加网站</span>
                     </button>
@@ -87,6 +110,7 @@
                         type="text" 
                         id="searchBox" 
                         class="search-box" 
+                        v-model="searchKeyword"
                         placeholder="搜索网站名称或描述..." 
                         autocomplete="off"
                     >
@@ -101,175 +125,267 @@
                 <div class="filter-container">
                     <span class="filter-label">筛选：</span>
                     <div class="filter-buttons">
-                        <button class="filter-btn active" data-filter="all" type="button">全部</button>
-                        <button class="filter-btn" data-filter="free" type="button">免费</button>
-                        <button class="filter-btn" data-filter="paid" type="button">付费</button>
-                        <button class="filter-btn" data-filter="trial" type="button">试用</button>
-                        <button class="filter-btn" data-filter="points" type="button">送积分</button>
+                        <button class="filter-btn" :class="{ active: currentFilter === 'all' }" @click="setFilter('all')" type="button">全部</button>
+                        <button class="filter-btn" :class="{ active: currentFilter === 'free' }" @click="setFilter('free')" type="button">免费</button>
+                        <button class="filter-btn" :class="{ active: currentFilter === 'paid' }" @click="setFilter('paid')" type="button">付费</button>
+                        <button class="filter-btn" :class="{ active: currentFilter === 'trial' }" @click="setFilter('trial')" type="button">试用</button>
+                        <button class="filter-btn" :class="{ active: currentFilter === 'points' }" @click="setFilter('points')" type="button">送积分</button>
                     </div>
                 </div>
             </div>
 
             <!-- 网站展示区域 -->
             <section class="websites-section" aria-label="网站列表">
-                <div id="websitesContainer" class="websites-grid">
-                    <!-- 网站卡片将通过JavaScript动态加载 -->
-                    <% websites.forEach(function(website) { %>
-                        <div class="website-card" onclick="window.open('<%= website.url %>', '_blank')">
-                    <div class="website-icon"><%= website.icon %></div>
-                    <div class="website-info">
-                      <h3 class="website-name"><%= website.name %></h3>
-                      <p class="website-description"><%= website.description %></p>
+                <!-- 网站卡片容器 -->
+                <div v-if="isLoading" class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>加载中...</p>
+                </div>
+                
+                <div v-else-if="hasWebsites" class="websites-grid" id="websites-container">
+                    <div 
+                        v-for="website in filteredWebsites" 
+                        :key="website.id"
+                        class="website-card" 
+                        :data-website-id="website.id"
+                    >
+                        <div class="card-header">
+                            <span class="website-icon">{{ website.icon }}</span>
+                            <div class="card-actions">
+                                <button @click="showEditWebsiteModal(website)" class="edit-btn">✏️</button>
+                                <button @click="deleteWebsite(website.id)" class="delete-btn">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="website-title">{{ website.title }}</h3>
+                            <p class="website-description">{{ website.description }}</p>
+                            <a :href="website.url" target="_blank" class="website-url">{{ website.url }}</a>
+                        </div>
                     </div>
-                    <div class="card-actions">
-                      <div class="action-icon edit-icon" onclick="event.stopPropagation(); handleEditWebsite('<%= website.name %>');">✏️</div>
-                      <div class="action-icon delete-icon" onclick="event.stopPropagation(); handleDeleteWebsite('<%= website.name %>');">🗑️</div>
-                    </div>
-                  </div>
-                    <% }); %>
+                </div>
+                
+                <div v-else class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p class="empty-text">暂无网站</p>
                 </div>
             </section>
         </main>
-    </div>
-
-    <!-- 添加分类弹窗 -->
-    <div id="addCategoryModal" class="modal" style="display: none;">
-        <div class="modal-content">
+        
+        <!-- 添加分类模态框 -->
+    <div class="modal-overlay" v-show="modals.addCategory" @click="closeCategoryModal">
+        <div class="modal-content" @click.stop>
             <div class="modal-header">
                 <h3>添加分类</h3>
-                <span class="close" onclick="hideAddCategoryModal();">&times;</span>
+                <button class="close-btn" @click="closeCategoryModal">✕</button>
             </div>
             <div class="modal-body">
-                <form id="addCategoryForm">
-                    <div class="form-group">
-                        <label for="categoryName">分类名称：</label>
-                        <input type="text" id="categoryName" name="categoryName" required>
+                <div class="form-group">
+                    <label for="categoryName">分类名称</label>
+                    <input type="text" 
+                           id="categoryName" 
+                           v-model="categoryForm.name" 
+                           placeholder="请输入分类名称">
+                </div>
+                <div class="form-group">
+                    <label for="categoryIcon">分类图标</label>
+                    <div class="icon-input">
+                        <span class="icon-preview">{{ categoryForm.icon }}</span>
+                        <button type="button" 
+                                class="icon-picker-btn" 
+                                @click="showIconSelector('category', categoryForm.icon)">
+                            选择图标
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label for="categoryIcon">分类图标：</label>
-                        <div class="icon-input-container">
-                            <input type="text" id="categoryIcon" name="categoryIcon" class="icon-input" placeholder="例如：📚" required>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" onclick="hideAddCategoryModal();">取消</button>
-                        <button type="submit">添加</button>
-                    </div>
-                </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeCategoryModal">取消</button>
+                <button class="btn btn-primary" @click="saveCategory">保存</button>
             </div>
         </div>
     </div>
-
-    <!-- 编辑分类弹窗 -->
-    <div id="editCategoryModal" class="modal" style="display: none;">
-        <div class="modal-content">
+    
+    <!-- 编辑分类模态框 -->
+    <div class="modal-overlay" v-show="modals.editCategory" @click="closeCategoryModal">
+        <div class="modal-content" @click.stop>
             <div class="modal-header">
                 <h3>编辑分类</h3>
-                <span class="close" onclick="hideEditCategoryModal();">&times;</span>
+                <button class="close-btn" @click="closeCategoryModal">✕</button>
             </div>
             <div class="modal-body">
-                <form id="editCategoryForm">
-                    <input type="hidden" id="editCategoryOriginalName" name="originalName">
-                    <div class="form-group">
-                        <label for="editCategoryName">分类名称：</label>
-                        <input type="text" id="editCategoryName" name="categoryName" required>
+                <div class="form-group">
+                    <label for="editCategoryName">分类名称</label>
+                    <input type="text" 
+                           id="editCategoryName" 
+                           v-model="categoryForm.name" 
+                           placeholder="请输入分类名称">
+                </div>
+                <div class="form-group">
+                    <label for="editCategoryIcon">分类图标</label>
+                    <div class="icon-input">
+                        <span class="icon-preview">{{ categoryForm.icon }}</span>
+                        <button type="button" 
+                                class="icon-picker-btn" 
+                                @click="showIconSelector('category', categoryForm.icon)">
+                            选择图标
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label for="editCategoryIcon">分类图标：</label>
-                        <div class="icon-input-container">
-                            <input type="text" id="editCategoryIcon" name="categoryIcon" class="icon-input" placeholder="例如：📚" required>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" onclick="hideEditCategoryModal();">取消</button>
-                        <button type="submit">保存</button>
-                    </div>
-                </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeCategoryModal">取消</button>
+                <button class="btn btn-primary" @click="saveCategory">保存</button>
             </div>
         </div>
     </div>
 
-    <!-- 添加网站弹窗 -->
-    <div id="addWebsiteModal" class="modal" style="display: none;">
-        <div class="modal-content">
+    <!-- 添加网站模态框 -->
+    <div class="modal-overlay" v-show="modals.addWebsite" @click="closeWebsiteModal">
+        <div class="modal-content" @click.stop>
             <div class="modal-header">
                 <h3>添加网站</h3>
-                <span class="close" onclick="hideAddWebsiteModal();">&times;</span>
+                <button class="close-btn" @click="closeWebsiteModal">✕</button>
             </div>
             <div class="modal-body">
-                <form id="addWebsiteForm">
-                    <div class="form-group">
-                        <label for="websiteName">网站名称：</label>
-                        <input type="text" id="websiteName" name="websiteName" required>
+                <div class="form-group">
+                    <label for="websiteName">网站名称</label>
+                    <input type="text" 
+                           id="websiteName" 
+                           v-model="websiteForm.title" 
+                           placeholder="请输入网站名称">
+                </div>
+                <div class="form-group">
+                    <label for="websiteUrl">网站地址</label>
+                    <input type="url" 
+                           id="websiteUrl" 
+                           v-model="websiteForm.url" 
+                           placeholder="请输入网站地址">
+                </div>
+                <div class="form-group">
+                    <label for="websiteDescription">网站描述</label>
+                    <textarea id="websiteDescription" 
+                              v-model="websiteForm.description" 
+                              placeholder="请输入网站描述"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="websiteCategory">所属分类</label>
+                    <select id="websiteCategory" v-model="websiteForm.categoryId">
+                        <option value="">请选择分类</option>
+                        <option v-for="category in categories" 
+                                :key="category.id" 
+                                :value="category.id">
+                            {{ category.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="websiteIcon">网站图标</label>
+                    <div class="icon-input">
+                        <span class="icon-preview">{{ websiteForm.icon }}</span>
+                        <button type="button" 
+                                class="icon-picker-btn" 
+                                @click="showIconSelector('website', websiteForm.icon)">
+                            选择图标
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label for="websiteDescription">网站描述：</label>
-                        <input type="text" id="websiteDescription" name="websiteDescription" placeholder="简要描述网站功能">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeWebsiteModal">取消</button>
+                <button class="btn btn-primary" @click="saveWebsite">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑网站模态框 -->
+    <div class="modal-overlay" v-show="modals.editWebsite" @click="closeWebsiteModal">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3>编辑网站</h3>
+                <button class="close-btn" @click="closeWebsiteModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editWebsiteName">网站名称</label>
+                    <input type="text" 
+                           id="editWebsiteName" 
+                           v-model="websiteForm.title" 
+                           placeholder="请输入网站名称">
+                </div>
+                <div class="form-group">
+                    <label for="editWebsiteUrl">网站地址</label>
+                    <input type="url" 
+                           id="editWebsiteUrl" 
+                           v-model="websiteForm.url" 
+                           placeholder="请输入网站地址">
+                </div>
+                <div class="form-group">
+                    <label for="editWebsiteDescription">网站描述</label>
+                    <textarea id="editWebsiteDescription" 
+                              v-model="websiteForm.description" 
+                              placeholder="请输入网站描述"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editWebsiteCategory">所属分类</label>
+                    <select id="editWebsiteCategory" v-model="websiteForm.categoryId">
+                        <option value="">请选择分类</option>
+                        <option v-for="category in categories" 
+                                :key="category.id" 
+                                :value="category.id">
+                            {{ category.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editWebsiteIcon">网站图标</label>
+                    <div class="icon-input">
+                        <span class="icon-preview">{{ websiteForm.icon }}</span>
+                        <button type="button" 
+                                class="icon-picker-btn" 
+                                @click="showIconSelector('website', websiteForm.icon)">
+                            选择图标
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label for="websiteUrl">网站地址：</label>
-                        <input type="url" id="websiteUrl" name="websiteUrl" placeholder="https://example.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="websiteIcon">网站图标：</label>
-                        <div class="icon-input-container">
-                            <input type="text" id="websiteIcon" name="websiteIcon" class="icon-input" placeholder="例如：🌐" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="websiteCategory">所属分类：</label>
-                        <select id="websiteCategory" name="websiteCategory" required>
-                            <option value="">请选择分类</option>
-                            <!-- 分类选项将通过JavaScript动态生成 -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="websitePriceType">价格类型：</label>
-                        <select id="websitePriceType" name="websitePriceType" required>
-                            <option value="free">免费</option>
-                            <option value="paid">付费</option>
-                            <option value="trial">试用</option>
-                            <option value="points">送积分</option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" onclick="hideAddWebsiteModal();">取消</button>
-                        <button type="submit">添加</button>
-                    </div>
-                </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeWebsiteModal">取消</button>
+                <button class="btn btn-primary" @click="saveWebsite">保存</button>
             </div>
         </div>
     </div>
 
-    <!-- Emoji图标选择器弹窗 -->
-    <div id="iconPicker" class="icon-picker">
-        <div class="icon-picker-content">
-            <div class="icon-picker-header">
+    <!-- 图标选择器模态框 -->
+    <div class="modal-overlay" v-show="modals.iconSelector" @click="closeIconSelector">
+        <div class="modal-content icon-picker-modal" @click.stop>
+            <div class="modal-header">
                 <h3>选择图标</h3>
-                <span class="close" onclick="hideIconPicker();">&times;</span>
+                <button class="close-btn" @click="closeIconSelector">✕</button>
             </div>
-            
-            <!-- 搜索框 -->
-            <div class="icon-search-container">
-                <input type="text" id="emojiSearch" class="icon-search-input" placeholder="搜索emoji..." autocomplete="off">
-            </div>
-            
-            <!-- 分类标签 -->
-            <div class="icon-categories-wrapper">
-                
-                <div id="emojiCategories" class="icon-categories">
-                    <!-- 分类按钮将通过JavaScript动态生成 -->
+            <div class="modal-body">
+                <div class="icon-categories">
+                    <button v-for="category in iconCategories" 
+                            :key="category.name"
+                            :class="['category-btn', { active: iconSelector.selectedCategory === category.name }]"
+                            @click="selectIconCategory(category.name)">
+                        {{ category.label }}
+                    </button>
                 </div>
-                
-            </div>
-            
-            <!-- 图标网格 -->
-            <div class="icon-grid-container">
-                <div id="emojiGrid" class="icon-grid">
-                    <!-- emoji图标将通过JavaScript动态加载 -->
+                <div class="icon-grid">
+                    <button v-for="icon in currentIcons" 
+                            :key="icon"
+                            :class="['icon-btn', { selected: iconSelector.selectedIcon === icon }]"
+                            @click="selectIcon(icon)">
+                        {{ icon }}
+                    </button>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeIconSelector">取消</button>
+                <button class="btn btn-primary" @click="confirmIconSelection">确认</button>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- 页脚 -->
@@ -278,35 +394,25 @@
         <p>快捷键：Ctrl/Cmd + K 快速搜索 | ESC 清空搜索</p>
     </footer>
 
-    <!-- JavaScript -->
-    <!-- IndexedDB存储系统 -->
+
+    
+    <!-- 保留必要的工具类 -->
     <link rel="stylesheet" href="/css/password-manager.css">
     <link rel="stylesheet" href="/css/data-manager.css">
     
     <script src="/js/CryptoUtils.js"></script>
-    <script src="/js/NavigationDB.js"></script>
-    <script src="/js/DataManager.js"></script>
-    <script src="/js/PasswordManager.js"></script>
-    <script src="/js/DataManagerUI.js"></script>
-    <script src="/js/StorageIntegration.js"></script>
-    <script src="/js/CategoryManager.js"></script>
-    <!-- EmojiPicker functionality is included in main.js --></script>
     
-    <!-- 主应用脚本 -->
-    <script src="/js/main.js"></script>
+    <!-- 模块化脚本 -->
+    <script type="module" src="/js/services/IndexedDBService.js"></script>
+    <script type="module" src="/js/services/DataSyncService.js"></script>
+    <script type="module" src="/js/modules/CategoryManager.js"></script>
+    <script type="module" src="/js/modules/WebsiteManager.js"></script>
+    <script type="module" src="/js/modules/UIManager.js"></script>
+    <script type="module" src="/js/vue-app.js"></script>
     
-    <!-- 初始化存储集成系统 -->
+    <!-- Vue3 应用初始化 -->
     <script>
-        // 等待页面加载完成后初始化存储系统
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                // 初始化存储集成系统
-                await initializeStorageIntegration();
-                console.log('存储集成系统初始化成功');
-            } catch (error) {
-                console.error('存储集成系统初始化失败，使用传统模式:', error);
-            }
-        });
+        // Vue3 应用将在 vue-app.js 中初始化
     </script>
     
     <!-- 结构化数据 -->

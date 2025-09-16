@@ -58,7 +58,7 @@ class CryptoUtils {
             // 转换为Base64字符串
             return this.arrayBufferToBase64(hashBuffer);
         } catch (error) {
-            console.error('密码哈希生成失败:', error);
+            // 密码哈希生成失败
             throw new Error('密码哈希生成失败');
         }
     }
@@ -76,7 +76,7 @@ class CryptoUtils {
             const computedHash = await this.hashPassword(password, salt, iterations);
             return computedHash === storedHash;
         } catch (error) {
-            console.error('密码验证失败:', error);
+            // 密码验证失败
             return false;
         }
     }
@@ -121,7 +121,7 @@ class CryptoUtils {
 
             return key;
         } catch (error) {
-            console.error('密钥派生失败:', error);
+            // 密钥派生失败
             throw new Error('密钥派生失败');
         }
     }
@@ -169,7 +169,7 @@ class CryptoUtils {
                 keyDerivation: 'PBKDF2'
             };
         } catch (error) {
-            console.error('数据加密失败:', error);
+            // 数据加密失败
             throw new Error('数据加密失败');
         }
     }
@@ -208,7 +208,7 @@ class CryptoUtils {
             const decoder = new TextDecoder();
             return decoder.decode(decryptedBuffer);
         } catch (error) {
-            console.error('数据解密失败:', error);
+            // 数据解密失败
             throw new Error('数据解密失败或密码错误');
         }
     }
@@ -225,7 +225,7 @@ class CryptoUtils {
             const jsonString = JSON.stringify(jsonObject);
             return await this.encryptData(jsonString, password, salt);
         } catch (error) {
-            console.error('JSON加密失败:', error);
+            // JSON加密失败
             throw new Error('JSON加密失败');
         }
     }
@@ -241,7 +241,7 @@ class CryptoUtils {
             const decryptedString = await this.decryptData(encryptedObject, password);
             return JSON.parse(decryptedString);
         } catch (error) {
-            console.error('JSON解密失败:', error);
+            // JSON解密失败
             throw new Error('JSON解密失败或密码错误');
         }
     }
@@ -311,7 +311,7 @@ class CryptoUtils {
             const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
             return this.arrayBufferToBase64(hashBuffer);
         } catch (error) {
-            console.error('SHA-256哈希计算失败:', error);
+            // SHA-256哈希计算失败
             throw new Error('哈希计算失败');
         }
     }
@@ -327,7 +327,7 @@ class CryptoUtils {
             const computedHash = await this.sha256Hash(data);
             return computedHash === expectedHash;
         } catch (error) {
-            console.error('完整性验证失败:', error);
+            // 完整性验证失败
             return false;
         }
     }
@@ -360,7 +360,7 @@ class CryptoUtils {
             const signature = await crypto.subtle.sign('HMAC', key, dataBuffer);
             return this.arrayBufferToBase64(signature);
         } catch (error) {
-            console.error('HMAC签名生成失败:', error);
+            // HMAC签名生成失败
             throw new Error('HMAC签名生成失败');
         }
     }
@@ -377,7 +377,7 @@ class CryptoUtils {
             const computedSignature = await this.generateHMAC(data, secret);
             return computedSignature === signature;
         } catch (error) {
-            console.error('HMAC签名验证失败:', error);
+            // HMAC签名验证失败
             return false;
         }
     }

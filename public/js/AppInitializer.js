@@ -5,7 +5,6 @@
 
 // 全局图标选择器实例
 let emojiIconPicker = null;
-window.emojiIconPicker = null;
 
 // 显示图标选择器
 function showIconPicker(targetInputId) {

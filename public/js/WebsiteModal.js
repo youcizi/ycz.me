@@ -49,22 +49,124 @@ function hideAddWebsiteModal() {
   }
 }
 
+// 显示编辑网站弹窗
+async function showEditWebsiteModal(websiteData) {
+  const modal = document.getElementById('addWebsiteModal');
+  const form = document.getElementById('addWebsiteForm');
+  
+  if (modal && form) {
+    // 如果传入的是字符串（网站名称），则需要获取完整数据
+    if (typeof websiteData === 'string') {
+      const websiteName = websiteData;
+      form.dataset.editMode = 'true';
+      form.dataset.originalName = websiteName;
+      
+      // 更新弹窗标题和按钮
+      const modalTitle = modal.querySelector('.modal-title');
+      if (modalTitle) modalTitle.textContent = '编辑网站';
+      
+      const submitBtn = modal.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.textContent = '保存修改';
+      
+      updateCategorySelector();
+      modal.style.display = 'flex';
+      fetchWebsiteDetails(websiteName);
+      return;
+    }
+    
+    // 如果传入的是网站对象，直接填充数据
+    const website = websiteData;
+    console.log('编辑网站数据:', website);
+    
+    // 设置编辑模式标记
+    form.dataset.editMode = 'true';
+    form.dataset.originalName = website.name;
+    
+    // 更新弹窗标题
+    const modalTitle = modal.querySelector('.modal-title');
+    if (modalTitle) {
+      modalTitle.textContent = '编辑网站';
+    }
+    
+    // 更新提交按钮文本
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.textContent = '保存修改';
+    }
+    
+    // 更新分类选择器
+    await updateCategorySelector();
+    
+    // 直接填充表单数据
+    document.getElementById('websiteName').value = website.name || '';
+    document.getElementById('websiteDescription').value = website.description || '';
+    document.getElementById('websiteUrl').value = website.url || '';
+    document.getElementById('websiteIcon').value = website.icon || '';
+    
+    // 设置分类选择器的值 - 直接使用categoryId
+    let categoryValue = '';
+    if (website.categoryId && website.categoryId !== 'all') {
+      categoryValue = website.categoryId;
+    } else if (website.category && website.category !== '未分类') {
+      // 如果没有categoryId但有category，尝试通过名称匹配
+      const app = window.navigationApp;
+      if (app && app.navigationDB) {
+        try {
+          const categories = await app.navigationDB.getCategories();
+          const category = categories.find(cat => cat.name === website.category);
+          if (category && category.id) {
+            categoryValue = category.id;
+          } else {
+            categoryValue = website.category;
+          }
+        } catch (error) {
+          console.error('获取分类信息失败:', error);
+          categoryValue = website.category;
+        }
+      } else {
+        categoryValue = website.category;
+      }
+    }
+    
+    document.getElementById('websiteCategory').value = categoryValue;
+    document.getElementById('websitePriceType').value = website.priceType || 'free';
+    
+    console.log('编辑表单数据填充:', {
+      name: website.name,
+      categoryId: website.categoryId,
+      category: website.category,
+      selectedCategory: categoryValue
+    });
+    
+    // 显示弹窗
+    modal.style.display = 'flex';
+    
+    // 聚焦到网站名称输入框
+    setTimeout(() => {
+      const nameInput = document.getElementById('websiteName');
+      if (nameInput) {
+        nameInput.focus();
+      }
+    }, 100);
+  }
+}
+
 // 动态更新分类选择器
 // 防重复调用标志
-let isUpdatingCategorySelector = false;
+let isUpdatingWebsiteCategorySelector = false;
 
 async function updateCategorySelector() {
   // 防止重复调用
-  if (isUpdatingCategorySelector) {
+  if (isUpdatingWebsiteCategorySelector) {
     return;
   }
   
-  isUpdatingCategorySelector = true;
+  isUpdatingWebsiteCategorySelector = true;
   
   try {
     const categorySelect = document.getElementById('websiteCategory');
     if (!categorySelect) {
-      isUpdatingCategorySelector = false;
+      isUpdatingWebsiteCategorySelector = false;
       return;
     }
     
@@ -77,28 +179,20 @@ async function updateCategorySelector() {
     defaultOption.textContent = '请选择分类';
     categorySelect.appendChild(defaultOption);
     
-    // 从本地存储获取分类数据
+    // 从IndexedDB获取分类数据
     let categories = [];
     
-    // 检查是否有存储集成系统
-    if (window.storageIntegration && window.storageIntegration.getStorageAdapter) {
+    // 检查是否有NavigationDB实例
+    const app = window.navigationApp;
+    if (app && app.navigationDB) {
       try {
-        const adapter = window.storageIntegration.getStorageAdapter();
-        categories = await adapter.getCategories();
+        categories = await app.navigationDB.getCategories();
+        console.log('分类选择器 - 从IndexedDB获取的分类:', categories);
       } catch (error) {
-        console.warn('从IndexedDB获取分类失败，尝试从localStorage获取:', error);
-        // 降级到localStorage
-        const storedCategories = localStorage.getItem('categories');
-        if (storedCategories) {
-          categories = JSON.parse(storedCategories);
-        }
+        console.error('分类选择器 - 从IndexedDB获取分类失败:', error);
       }
     } else {
-      // 降级到localStorage
-      const storedCategories = localStorage.getItem('categories');
-      if (storedCategories) {
-        categories = JSON.parse(storedCategories);
-      }
+      console.warn('分类选择器 - NavigationDB实例不可用');
     }
     
     // 如果本地没有分类数据，使用默认分类
@@ -111,23 +205,33 @@ async function updateCategorySelector() {
         { name: '购物', icon: '🛒' },
         { name: '新闻', icon: '📰' }
       ];
+      console.log('分类选择器 - 使用默认分类:', categories);
     }
     
     // 添加分类选项（排除"全部"分类）
+    let addedCount = 0;
     categories.forEach(category => {
       if (category.name && category.name !== '全部') {
         const option = document.createElement('option');
-        option.value = category.name;
+        // 使用分类ID作为value，如果没有ID则使用name（兼容默认分类）
+        option.value = category.id || category.name;
         option.textContent = category.name;
+        // 添加data属性存储分类信息
+        option.dataset.categoryId = category.id || '';
+        option.dataset.categoryName = category.name;
         categorySelect.appendChild(option);
+        addedCount++;
       }
     });
     
+    console.log('分类选择器 - 添加了', addedCount, '个分类选项');
+    console.log('分类选择器 - 当前选择器选项数量:', categorySelect.options.length);
+    
   } catch (error) {
-    console.error('更新分类选择器失败:', error);
+    // 更新分类选择器失败
   } finally {
     // 重置防重复调用标志
-    isUpdatingCategorySelector = false;
+    isUpdatingWebsiteCategorySelector = false;
   }
 }
 
@@ -153,7 +257,6 @@ async function fetchWebsiteDetails(websiteName) {
       utils.showToast('获取网站信息失败', 'error');
     }
   } catch (error) {
-    console.error('获取网站详细信息错误:', error);
     utils.showToast('获取网站信息失败，请稍后重试', 'error');
   }
 }
@@ -167,14 +270,42 @@ function initWebsiteModalEvents() {
       e.preventDefault();
       
       const formData = new FormData(addWebsiteForm);
+      const categoryValue = formData.get('websiteCategory');
+      
+      console.log('表单提交 - 收集到的分类值:', categoryValue);
+      
+      // 获取分类ID和名称
+      let categoryId = 'all';
+      let categoryName = '未分类';
+      
+      if (categoryValue) {
+        // 获取选中的option元素来获取分类信息
+        const categorySelect = document.getElementById('websiteCategory');
+        const selectedOption = categorySelect.querySelector(`option[value="${categoryValue}"]`);
+        
+        if (selectedOption) {
+          categoryId = selectedOption.dataset.categoryId || categoryValue;
+          categoryName = selectedOption.dataset.categoryName || selectedOption.textContent;
+          console.log('表单提交 - 分类信息:', { categoryId, categoryName, categoryValue });
+        } else {
+          // 如果没有找到对应的option，可能是默认分类
+          categoryId = categoryValue;
+          categoryName = categoryValue;
+          console.log('表单提交 - 使用默认分类信息:', { categoryId, categoryName });
+        }
+      }
+      
       const websiteData = {
         name: formData.get('websiteName'),
         description: formData.get('websiteDescription'),
         url: formData.get('websiteUrl'),
         icon: formData.get('websiteIcon'),
-        category: formData.get('websiteCategory'),
+        category: categoryName, // 保留category字段用于服务器端
+        categoryId: categoryId, // 添加categoryId字段用于IndexedDB
         priceType: formData.get('websitePriceType')
       };
+      
+      console.log('表单提交 - 最终网站数据:', websiteData);
       
       if (websiteData.name && websiteData.url && websiteData.category) {
         try {
@@ -208,29 +339,26 @@ function initWebsiteModalEvents() {
             const action = isEditMode ? '更新' : '添加';
             utils.showToast(`网站 "${websiteData.name}" ${action}成功！`, 'success');
             
-            // 更新缓存
+            // 更新IndexedDB
             const app = window.navigationApp;
             if (app) {
               if (isEditMode) {
-                app.updateCachedWebsite(websiteData, originalName);
+                await app.updateWebsiteInLocal(websiteData, originalName);
               } else {
-                app.updateCachedWebsite(websiteData);
+                await app.addWebsiteToLocal(websiteData);
               }
+              // 重新加载网站数据以更新显示
+              await app.loadWebsites();
             }
             
             // 关闭弹窗
             hideAddWebsiteModal();
-            // 刷新页面以显示更新的网站
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
           } else {
             const action = isEditMode ? '更新' : '添加';
             utils.showToast(result.message || `${action}网站失败`, 'error');
           }
         } catch (error) {
           const action = isEditMode ? '更新' : '添加';
-          console.error(`${action}网站错误:`, error);
           utils.showToast(`${action}网站失败，请稍后重试`, 'error');
         }
       } else {
@@ -244,6 +372,7 @@ function initWebsiteModalEvents() {
 if (typeof window !== 'undefined') {
   window.showAddWebsiteModal = showAddWebsiteModal;
   window.hideAddWebsiteModal = hideAddWebsiteModal;
+  window.showEditWebsiteModal = showEditWebsiteModal;
   window.updateCategorySelector = updateCategorySelector;
   window.fetchWebsiteDetails = fetchWebsiteDetails;
   window.initWebsiteModalEvents = initWebsiteModalEvents;

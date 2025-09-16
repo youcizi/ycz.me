@@ -5,12 +5,7 @@ class NavigationApp {
     this.currentFilter = 'all';
     this.allWebsites = [];
     this.filteredWebsites = [];
-    this.cacheKeys = {
-      categories: 'nav_categories',
-      websites: 'nav_websites',
-      timestamp: 'nav_cache_timestamp'
-    };
-    this.cacheExpiry = 24 * 60 * 60 * 1000; // 24小时过期
+    this.categories = [];
     this.categoryManager = null;
     this.init();
   }
@@ -18,10 +13,16 @@ class NavigationApp {
   // 初始化应用
   async init() {
     this.bindEvents();
-    this.initSidebarState();
     await this.initStorage();
     this.initCategoryManager();
-    this.loadInitialData();
+    await this.restoreSidebarState();
+    await this.loadInitialData();
+    
+    // 初始化完成
+    console.log('NavigationApp初始化完成');
+    
+    // 添加清除数据按钮用于测试
+    this.addClearDataButton();
   }
 
   // 初始化存储
@@ -39,149 +40,159 @@ class NavigationApp {
          await this.storageIntegration.initialize();
        }
     } catch (error) {
-      console.error('存储初始化失败:', error);
+      // 存储初始化失败，继续使用默认配置
     }
   }
 
   // 初始化分类管理器
   initCategoryManager() {
     if (typeof CategoryManager !== 'undefined' && this.navigationDB) {
-      this.categoryManager = new CategoryManager(this.navigationDB, this.storageIntegration);
+      // 创建事件总线
+      this.eventBus = this.createEventBus();
+      
+      this.categoryManager = new CategoryManager(this.navigationDB, this.storageIntegration, this.eventBus);
+      
+      // 监听分类切换事件
+      this.eventBus.on('categoryChanged', (category) => {
+        this.handleCategoryChangeFromEvent(category);
+      });
+      
       // 将categoryManager设为全局变量，供模板中的onclick使用
       window.categoryManager = this.categoryManager;
+      
+      // 将NavigationApp实例设为全局变量
+      window.navigationApp = this;
+      
+      // 将网站操作函数设为全局函数，供模板中的onclick使用
+      window.handleEditWebsite = this.handleEditWebsite.bind(this);
+      window.handleDeleteWebsite = this.handleDeleteWebsite.bind(this);
     }
   }
 
-  // 缓存管理模块
-  // 检查缓存是否有效
-  isCacheValid() {
-    const timestamp = localStorage.getItem(this.cacheKeys.timestamp);
-    if (!timestamp) return false;
+  // 创建事件总线
+  createEventBus() {
+    const listeners = {};
+    return {
+      emit: (event, data) => {
+        if (listeners[event]) {
+          listeners[event].forEach(callback => callback(data));
+        }
+      },
+      on: (event, callback) => {
+        if (!listeners[event]) {
+          listeners[event] = [];
+        }
+        listeners[event].push(callback);
+      },
+      off: (event, callback) => {
+        if (listeners[event]) {
+          listeners[event] = listeners[event].filter(cb => cb !== callback);
+        }
+      }
+    };
+  }
+
+  // 处理来自事件的分类切换
+  async handleCategoryChangeFromEvent(categoryName) {
+    console.log('分类切换事件 - 分类名称:', categoryName);
     
-    const cacheTime = parseInt(timestamp);
-    const now = Date.now();
-    return (now - cacheTime) < this.cacheExpiry;
-  }
-
-  // 获取缓存的分类数据
-  getCachedCategories() {
-    try {
-      const data = localStorage.getItem(this.cacheKeys.categories);
-      return data ? JSON.parse(data) : null;
-    } catch (error) {
-      console.error('读取分类缓存失败:', error);
-      return null;
+    if (categoryName === this.currentCategory) {
+      return;
     }
-  }
-
-  // 获取缓存的网站数据
-  getCachedWebsites(category = null) {
-    try {
-      const data = localStorage.getItem(this.cacheKeys.websites);
-      if (!data) return null;
-      
-      const websites = JSON.parse(data);
-      if (category && category !== '全部') {
-        return websites.filter(site => site.category === category);
-      }
-      return websites;
-    } catch (error) {
-      console.error('读取网站缓存失败:', error);
-      return null;
+    
+    this.currentCategory = categoryName;
+    
+    // 更新UI中分类按钮的active状态
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    
+    // 为当前分类添加active状态
+    const currentButton = document.querySelector(`[data-category="${categoryName}"]`) || 
+                         document.querySelector(`[data-category-id="${categoryName}"]`);
+    if (currentButton) {
+      currentButton.classList.add('active');
     }
-  }
-
-  // 缓存分类数据
-  setCachedCategories(categories) {
-    try {
-      localStorage.setItem(this.cacheKeys.categories, JSON.stringify(categories));
-      localStorage.setItem(this.cacheKeys.timestamp, Date.now().toString());
-    } catch (error) {
-      console.error('缓存分类数据失败:', error);
+    
+    // 清空搜索框
+    const searchBox = document.getElementById('searchBox');
+    if (searchBox) {
+      searchBox.value = '';
     }
+    
+    await this.loadWebsites(categoryName);
   }
 
-  // 缓存网站数据
-  setCachedWebsites(websites) {
-    try {
-      localStorage.setItem(this.cacheKeys.websites, JSON.stringify(websites));
-      localStorage.setItem(this.cacheKeys.timestamp, Date.now().toString());
-    } catch (error) {
-      console.error('缓存网站数据失败:', error);
-    }
-  }
 
-  // 清除所有缓存
-  clearCache() {
-    try {
-      localStorage.removeItem(this.cacheKeys.categories);
-      localStorage.removeItem(this.cacheKeys.websites);
-      localStorage.removeItem(this.cacheKeys.timestamp);
-      console.log('缓存已清除');
-    } catch (error) {
-      console.error('清除缓存失败:', error);
-    }
-  }
 
-  // 更新缓存中的单个网站
-  updateCachedWebsite(websiteData, originalName = null) {
-    try {
-      const cachedWebsites = this.getCachedWebsites() || [];
-      let updated = false;
-      
-      if (originalName) {
-        // 编辑模式：更新现有网站
-        const index = cachedWebsites.findIndex(site => site.name === originalName);
-        if (index !== -1) {
-          cachedWebsites[index] = websiteData;
-          updated = true;
-        }
-      } else {
-        // 添加模式：检查是否已存在
-        const existingIndex = cachedWebsites.findIndex(site => site.name === websiteData.name);
-        if (existingIndex !== -1) {
-          cachedWebsites[existingIndex] = websiteData;
-        } else {
-          cachedWebsites.push(websiteData);
-        }
-        updated = true;
-      }
-      
-      if (updated) {
-        this.setCachedWebsites(cachedWebsites);
-      }
-    } catch (error) {
-      console.error('更新网站缓存失败:', error);
-    }
-  }
-
-  // 从缓存中删除网站
-  removeCachedWebsite(websiteName) {
-    try {
-      const cachedWebsites = this.getCachedWebsites() || [];
-      const filteredWebsites = cachedWebsites.filter(site => site.name !== websiteName);
-      this.setCachedWebsites(filteredWebsites);
-    } catch (error) {
-      console.error('删除网站缓存失败:', error);
-    }
-  }
-
-  // 加载初始数据（优先使用缓存）
+  // 加载初始数据（优先使用IndexedDB）
   async loadInitialData() {
-    // 检查缓存是否有效
-    if (this.isCacheValid()) {
-      const cachedWebsites = this.getCachedWebsites(this.currentCategory);
-      if (cachedWebsites) {
-        console.log('使用缓存数据');
-        this.allWebsites = cachedWebsites;
-        this.applyFilter(); // 应用当前筛选
-        return;
+    try {
+      // 检查IndexedDB中是否有数据
+      if (this.navigationDB) {
+        const localCategories = await this.navigationDB.getCategories();
+        
+        // 如果有分类数据，说明本地数据库已初始化，优先使用本地数据
+        if (localCategories && localCategories.length > 0) {
+          // 先加载分类数据
+          this.categories = localCategories;
+          console.log('加载本地分类数据:', this.categories.length, '个');
+          
+          // 使用IndexedDB本地数据
+          const localWebsites = await this.navigationDB.getWebsites(this.currentCategory === '全部' ? null : this.currentCategory);
+          this.allWebsites = localWebsites || [];
+          this.applyFilter();
+          return;
+        }
       }
+      
+      // 本地数据不存在，首次访问或数据库为空，从服务器加载并同步到IndexedDB
+      // 首次访问或本地数据为空，从服务器加载数据并同步到本地
+      await this.loadAndSyncFromServer(this.currentCategory);
+    } catch (error) {
+      // 加载初始数据失败
+      // 降级到服务器加载
+      await this.loadWebsitesFromServer(this.currentCategory);
     }
-    
-    // 缓存无效或不存在，从服务器加载
-    console.log('从服务器加载数据');
-    await this.loadWebsitesFromServer(this.currentCategory);
+  }
+
+  /**
+   * 添加清除数据按钮用于测试
+   */
+  addClearDataButton() {
+    const button = document.createElement('button');
+    button.textContent = '清除本地数据(测试用)';
+    button.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;padding:5px 10px;background:#ff4444;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;';
+    button.onclick = async () => {
+      if (confirm('确定要清除所有本地数据吗？这将强制从服务器重新加载数据。')) {
+        await this.clearAllLocalData();
+        location.reload();
+      }
+    };
+    document.body.appendChild(button);
+  }
+
+  /**
+   * 清除所有本地数据
+   */
+  async clearAllLocalData() {
+    try {
+      // 清除IndexedDB
+      if (this.db) {
+        await this.db.clearCache();
+        const transaction = this.db.db.transaction([this.db.stores.WEBSITES, this.db.stores.CATEGORIES], 'readwrite');
+        await this.db._promisifyRequest(transaction.objectStore(this.db.stores.WEBSITES).clear());
+        await this.db._promisifyRequest(transaction.objectStore(this.db.stores.CATEGORIES).clear());
+      }
+      
+      // 清除localStorage
+      localStorage.removeItem('navigationApp_sidebarCollapsed');
+      localStorage.removeItem('navigationApp_lastSync');
+      
+      console.log('本地数据已清除');
+    } catch (error) {
+      console.error('清除本地数据失败:', error);
+    }
   }
 
   // 绑定事件
@@ -203,11 +214,8 @@ class NavigationApp {
       searchBtn.addEventListener('click', this.handleSearch.bind(this));
     }
 
-    // 分类切换
-    const categoryItems = document.querySelectorAll('.nav-item');
-    categoryItems.forEach(item => {
-      item.addEventListener('click', this.handleCategoryChange.bind(this));
-    });
+    // 分类切换事件由CategoryManager处理，这里不需要重复绑定
+    // CategoryManager会通过eventBus触发categoryChanged事件
     
     // 添加网站按钮事件
     const addWebsiteBtn = document.querySelector('.add-website-btn');
@@ -334,7 +342,7 @@ class NavigationApp {
     this.renderWebsites(filteredWebsites);
   }
 
-  // 从服务器加载网站数据并缓存
+  // 从服务器加载网站数据
   async loadWebsitesFromServer(category) {
     try {
       this.showLoading();
@@ -343,71 +351,130 @@ class NavigationApp {
       
       if (data.success) {
         this.allWebsites = data.data;
-        this.applyFilter(); // 应用当前筛选
-        
-        // 缓存数据到localStorage
-        if (category === '全部') {
-          // 如果是加载全部数据，直接缓存
-          this.setCachedWebsites(data.data);
-        } else {
-          // 如果是特定分类，需要合并到现有缓存中
-          this.mergeCategoryData(category, data.data);
-        }
+        this.applyFilter();
       } else {
         this.showError('加载失败');
       }
     } catch (error) {
-      console.error('加载错误:', error);
+      this.showError('网络连接失败');
+    }
+  }
+  
+  // 从服务器加载数据并同步到IndexedDB
+  async loadAndSyncFromServer(category) {
+    try {
+      this.showLoading();
+      
+      // 同时加载分类和网站数据
+      const [websitesResponse, categoriesResponse] = await Promise.all([
+        fetch(`/api/websites/${encodeURIComponent(category)}`),
+        fetch('/api/categories')
+      ]);
+      
+      const websitesData = await websitesResponse.json();
+      const categoriesData = await categoriesResponse.json();
+      
+      if (websitesData.success && categoriesData.success) {
+        // 验证ID一致性 - 分类数据
+        console.log('=== 分类数据ID验证 ===');
+        categoriesData.data.forEach((cat, index) => {
+          console.log(`分类${index + 1}: ID=${cat.id}, 名称=${cat.name}`);
+        });
+        
+        // 验证ID一致性 - 网站数据
+        console.log('=== 网站数据ID验证 ===');
+        websitesData.data.forEach((site, index) => {
+          console.log(`网站${index + 1}: ID=${site.id}, 名称=${site.name}, 分类=${site.category}`);
+        });
+        
+        // 批量存储到IndexedDB
+        if (this.navigationDB) {
+          // 批量存储分类数据
+          await this.navigationDB.saveCategories(categoriesData.data);
+          
+          // 批量存储网站数据
+          await this.navigationDB.saveWebsites(websitesData.data);
+        }
+        
+        this.allWebsites = websitesData.data;
+        this.applyFilter();
+      } else {
+        this.showError('加载失败');
+      }
+    } catch (error) {
+      // 同步数据失败
       this.showError('网络连接失败');
     }
   }
 
-  // 合并分类数据到缓存
-  mergeCategoryData(category, newData) {
-    try {
-      const cachedWebsites = this.getCachedWebsites() || [];
-      
-      // 移除该分类的旧数据
-      const filteredWebsites = cachedWebsites.filter(site => site.category !== category);
-      
-      // 添加新数据
-      const updatedWebsites = [...filteredWebsites, ...newData];
-      
-      // 更新缓存
-      this.setCachedWebsites(updatedWebsites);
-    } catch (error) {
-      console.error('合并分类数据失败:', error);
-    }
-  }
-
-  // 加载网站数据（优先使用缓存）
-  async loadWebsites(category) {
-    // 检查缓存是否有效
-    if (this.isCacheValid()) {
-      const cachedWebsites = this.getCachedWebsites(category);
-      if (cachedWebsites && cachedWebsites.length > 0) {
-        console.log(`使用缓存数据加载分类: ${category}`);
-        this.allWebsites = cachedWebsites;
-        this.applyFilter(); // 应用当前筛选
-        return;
-      }
-    }
+  // 加载网站数据（优先使用IndexedDB）
+  async loadWebsites(categoryFilter = null) {
+    console.log('开始加载网站数据，分类筛选:', categoryFilter);
     
-    // 缓存无效或不存在，从服务器加载
-    console.log(`从服务器加载分类: ${category}`);
-    await this.loadWebsitesFromServer(category);
+    try {
+      this.showLoading();
+      
+      let websites = [];
+      let categoryId = null;
+      
+      // 如果有分类筛选，转换为分类ID
+      if (categoryFilter && categoryFilter !== 'all' && categoryFilter !== '全部') {
+        const localCategories = await this.navigationDB.getCategories();
+        const category = localCategories.find(cat => cat.name === categoryFilter);
+        if (category) {
+          categoryId = category.id;
+          console.log('分类筛选转换: 名称="' + categoryFilter + '" -> ID="' + categoryId + '"');
+        } else {
+          console.warn('未找到分类:', categoryFilter);
+        }
+      }
+      
+      // 优先使用IndexedDB
+      if (this.navigationDB) {
+        const localCategories = await this.navigationDB.getCategories();
+        
+        // 如果有分类数据，说明本地数据库已初始化，优先使用本地数据
+        if (localCategories && localCategories.length > 0) {
+          // 使用IndexedDB数据加载分类
+          const localWebsites = await this.navigationDB.getWebsites(categoryId);
+          console.log('从IndexedDB加载的网站数据:', localWebsites.length, '个，分类ID:', categoryId);
+          this.allWebsites = localWebsites || [];
+          this.applyFilter();
+          return;
+        }
+        
+        if (this.allWebsites.length === 0 && (!categoryId || categoryId === 'all')) {
+          // 如果本地没有数据，从服务器加载
+          console.log('本地无数据，从服务器加载');
+          await this.loadAndSyncFromServer(categoryFilter);
+          websites = await this.navigationDB.getWebsites(categoryId);
+        }
+      } else {
+        // 如果IndexedDB不可用，从服务器加载
+        await this.loadWebsitesFromServer(categoryFilter);
+      }
+      
+    } catch (error) {
+      console.error('加载网站数据失败:', error);
+      // 降级到服务器加载
+      await this.loadWebsitesFromServer(categoryFilter);
+    }
   }
 
   // 渲染网站列表
   renderWebsites(websites) {
+    console.log('开始渲染网站列表，网站数量:', websites ? websites.length : 0);
     const container = document.getElementById('websitesContainer');
     if (!container) return;
 
     if (websites.length === 0) {
+      console.log('网站列表为空，显示空状态');
       this.showEmptyState();
       return;
     }
 
+    console.log('渲染网站详情:', websites.map(w => ({ id: w.id, name: w.name, categoryId: w.categoryId, category: w.category })));
+    
     const html = websites.map(website => {
       // 获取价格类型标签信息
       const priceTypeInfo = this.getPriceTypeInfo(website.priceType || 'free');
@@ -421,8 +488,8 @@ class NavigationApp {
           </div>
           <div class="price-tag ${priceTypeInfo.class}">${priceTypeInfo.label}</div>
           <div class="card-actions">
-            <div class="action-icon edit-icon" onclick="event.stopPropagation(); handleEditWebsite('${this.escapeHtml(website.name)}');">✏️</div>
-            <div class="action-icon delete-icon" onclick="event.stopPropagation(); handleDeleteWebsite('${this.escapeHtml(website.name)}');">🗑️</div>
+            <div class="action-icon edit-icon" onclick="event.stopPropagation(); window.navigationApp.handleEditWebsite('${this.escapeHtml(website.name)}');">✏️</div>
+            <div class="action-icon delete-icon" onclick="event.stopPropagation(); window.navigationApp.handleDeleteWebsite('${this.escapeHtml(website.name)}');">🗑️</div>
           </div>
         </div>
       `;
@@ -432,6 +499,7 @@ class NavigationApp {
     
     // 添加卡片动画
     this.animateCards();
+    console.log('网站列表渲染完成');
   }
 
   // 显示加载状态
@@ -507,29 +575,195 @@ class NavigationApp {
   // 处理添加网站
   handleAddWebsite() {
     showAddWebsiteModal();
-   }
-   
-  // 切换侧边栏状态
-  toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar) {
-      sidebar.classList.toggle('collapsed');
+  }
+  
+  /**
+   * 处理编辑网站
+   */
+  async handleEditWebsite(websiteName) {
+    console.log('=== 开始编辑网站流程 ===');
+    console.log('传入的网站名称:', websiteName);
+    console.log('当前所有网站数据:', this.websites);
+    
+    try {
+      // 根据网站名称从数据库获取完整信息
+      const websites = await this.navigationDB.getWebsites();
+      console.log('从数据库获取的所有网站:', websites.length, '个');
       
-      // 保存状态到localStorage
-      const isCollapsed = sidebar.classList.contains('collapsed');
-      localStorage.setItem('sidebarCollapsed', isCollapsed);
+      const website = websites.find(w => w.name === websiteName);
       
-      console.log('Sidebar状态切换:', isCollapsed ? '收缩' : '展开');
+      if (!website) {
+        console.error('未找到网站:', websiteName);
+        console.log('可用的网站名称:', websites.map(w => w.name));
+        CustomModal.showError('未找到要编辑的网站');
+        return;
+      }
+      
+      console.log('找到网站数据:', website);
+      console.log('网站完整信息:', JSON.stringify(website, null, 2));
+      
+      // 调用编辑弹窗
+      if (typeof window.showEditWebsiteModal === 'function') {
+        console.log('调用 showEditWebsiteModal 函数');
+        window.showEditWebsiteModal(website);
+      } else {
+        console.error('showEditWebsiteModal 函数不存在');
+        console.log('window 对象上的可用函数:', Object.keys(window).filter(key => key.includes('Modal')));
+      }
+    } catch (error) {
+      console.error('编辑网站失败:', error);
+      CustomModal.showError('编辑网站失败');
+    }
+    console.log('=== 编辑网站流程结束 ===');
+  }
+  
+  // 处理删除网站（带确认对话框）
+  async handleDeleteWebsite(websiteName) {
+    // 使用CustomModal进行确认
+    if (typeof CustomModal !== 'undefined' && CustomModal.showConfirm) {
+      return new Promise((resolve) => {
+        CustomModal.showConfirm(
+          `确定要删除网站 "${websiteName}" 吗？`,
+          async () => {
+            try {
+              const result = await this.deleteWebsite(websiteName);
+              if (result) {
+                utils.showToast(`网站 "${websiteName}" 删除成功！`, 'success');
+              }
+              resolve(result);
+            } catch (error) {
+               utils.showToast(`删除网站失败：${error.message}`, 'error');
+               resolve(false);
+             }
+          },
+          () => {
+            resolve(false);
+          }
+        );
+      });
+    } else {
+      // 降级到原生confirm
+      if (confirm(`确定要删除网站 "${websiteName}" 吗？`)) {
+        try {
+          const result = await this.deleteWebsite(websiteName);
+          if (result) {
+            utils.showToast(`网站 "${websiteName}" 删除成功！`, 'success');
+          }
+          return result;
+        } catch (error) {
+          utils.showToast(`删除网站失败：${error.message}`, 'error');
+          return false;
+        }
+      }
     }
   }
   
-  // 初始化侧边栏状态
-  initSidebarState() {
+  // 删除网站（不带确认对话框）
+  async deleteWebsite(websiteName) {
+    try {
+      if (!this.navigationDB) {
+        throw new Error('数据库未初始化，请刷新页面重试');
+      }
+      
+      // 先根据名称找到网站对象，获取其ID
+      const websites = await this.navigationDB.getWebsites();
+      const website = websites.find(site => site.name === websiteName);
+      
+      if (website) {
+        const result = await this.navigationDB.deleteWebsite(website.id);
+        
+        if (result) {
+          // 从当前显示的数据中移除该网站
+          this.allWebsites = this.allWebsites.filter(site => site.id !== website.id);
+          // 重新应用筛选和渲染
+          this.applyFilter();
+          return true;
+        } else {
+          throw new Error('删除失败，请重试');
+        }
+      } else {
+        // 尝试重新加载数据，可能是数据同步问题
+        await this.loadWebsites(this.currentCategory);
+        throw new Error('网站不存在或已被删除');
+      }
+    } catch (error) {
+      // 删除网站失败
+      throw error;
+    }
+  }
+  
+  // 添加网站到IndexedDB
+  async addWebsiteToLocal(websiteData) {
+    try {
+      if (this.navigationDB) {
+        await this.navigationDB.addWebsite(websiteData);
+        // 重新加载当前分类的数据
+        await this.loadWebsites(this.currentCategory);
+      }
+    } catch (error) {
+      // 加载初始数据失败
+    }
+  }
+  
+  // 更新网站到IndexedDB
+  async updateWebsiteInLocal(websiteData, originalName) {
+    try {
+      if (this.navigationDB) {
+        // 通过网站名称查找对应的网站ID
+        const websites = await this.navigationDB.getWebsites();
+        const existingWebsite = websites.find(site => site.name === originalName);
+        
+        if (existingWebsite) {
+          console.log('更新网站数据:', {
+            originalName,
+            websiteId: existingWebsite.id,
+            newData: websiteData
+          });
+          
+          await this.navigationDB.updateWebsite(existingWebsite.id, websiteData);
+          // 重新加载当前分类的数据
+          await this.loadWebsites(this.currentCategory);
+        } else {
+          console.error('未找到要更新的网站:', originalName);
+        }
+      }
+    } catch (error) {
+      console.error('更新网站到本地失败:', error);
+    }
+  }
+   
+  // 切换侧边栏状态
+  async toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
-    const savedState = localStorage.getItem('sidebarCollapsed');
+    const isCollapsed = sidebar.classList.toggle('collapsed');
     
-    if (sidebar && savedState === 'true') {
-      sidebar.classList.add('collapsed');
+    // 保存状态到IndexedDB
+    try {
+      if (this.navigationDB) {
+        const settings = await this.navigationDB.getSettings() || { id: 'main' };
+        settings.sidebarCollapsed = isCollapsed;
+        settings.updatedAt = Date.now();
+        await this.navigationDB._updateSettings(settings);
+      }
+    } catch (error) {
+      // 保存侧边栏状态失败
+    }
+  }
+  
+  // 恢复侧边栏状态
+  async restoreSidebarState() {
+    try {
+      if (this.navigationDB) {
+        const settings = await this.navigationDB.getSettings();
+        if (settings && settings.sidebarCollapsed === true) {
+          const sidebar = document.querySelector('.sidebar');
+          if (sidebar) {
+            sidebar.classList.add('collapsed');
+          }
+        }
+      }
+    } catch (error) {
+      // 恢复侧边栏状态失败
     }
   }
 }

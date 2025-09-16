@@ -19,11 +19,11 @@ class StorageIntegration {
      */
     async initialize() {
         try {
-            console.log('开始初始化存储集成系统...');
+            // 开始初始化存储集成系统
             
             // 检查IndexedDB支持
             if (!this.checkIndexedDBSupport()) {
-                console.warn('浏览器不支持IndexedDB，使用localStorage模式');
+                // 浏览器不支持IndexedDB，使用localStorage模式
                 this.isIndexedDBEnabled = false;
                 this.isInitialized = true;
                 return;
@@ -54,10 +54,10 @@ class StorageIntegration {
             this.isIndexedDBEnabled = true;
             this.isInitialized = true;
             
-            console.log('存储集成系统初始化完成');
+            // 存储集成系统初始化完成
             
         } catch (error) {
-            console.error('存储集成系统初始化失败:', error);
+            // 存储集成系统初始化失败
             this.isIndexedDBEnabled = false;
             this.isInitialized = true;
             throw error;
@@ -82,11 +82,11 @@ class StorageIntegration {
             
             const isPasswordSet = await this.navigationDB.hasPassword();
             if (isPasswordSet) {
-                console.log('检测到密码保护，需要验证');
+                // 检测到密码保护，需要验证
                 this.passwordManager.showPasswordVerification();
             }
         } catch (error) {
-            console.error('检查密码状态失败:', error);
+            // 检查密码状态失败
         }
     }
 
@@ -105,7 +105,7 @@ class StorageIntegration {
             this.addPasswordManagementEntry();
             
         } catch (error) {
-            console.error('集成到现有应用失败:', error);
+            // 集成到现有应用失败
         }
     }
 
@@ -114,7 +114,7 @@ class StorageIntegration {
      */
     extendNavigationApp() {
         if (typeof window.NavigationApp === 'undefined') {
-            console.warn('NavigationApp未找到，跳过扩展');
+            // NavigationApp未找到，跳过扩展
             return;
         }
 
@@ -133,7 +133,7 @@ class StorageIntegration {
                             return websites;
                         }
                     } catch (error) {
-                        console.warn('从IndexedDB加载失败，回退到服务器:', error);
+                        // 从IndexedDB加载失败，回退到服务器
                     }
                 }
                 // 回退到原始方法
@@ -155,7 +155,7 @@ class StorageIntegration {
                             });
                         }
                     } catch (error) {
-                        console.warn('保存到IndexedDB失败:', error);
+                        // 保存到IndexedDB失败
                     }
                 }
                 // 调用原始方法
@@ -193,7 +193,7 @@ class StorageIntegration {
                 this.addFloatingDataManagementButton();
             }
         } catch (error) {
-            console.error('添加数据管理入口失败:', error);
+            // 添加数据管理入口失败
         }
     }
 
@@ -258,7 +258,7 @@ class StorageIntegration {
                 });
             }
         } catch (error) {
-            console.error('添加密码管理入口失败:', error);
+            // 添加密码管理入口失败
         }
     }
 
@@ -295,9 +295,9 @@ class StorageIntegration {
             }
             
             this.isInitialized = false;
-            console.log('存储集成系统已销毁');
+            // 存储集成系统已销毁
         } catch (error) {
-            console.error('销毁存储集成系统失败:', error);
+            // 销毁存储集成系统失败
         }
     }
 }
@@ -356,7 +356,7 @@ class LocalStorageAdapter {
             const data = localStorage.getItem(this.prefix + 'categories');
             return data ? JSON.parse(data) : [];
         } catch (error) {
-            console.error('获取分类失败:', error);
+            // 获取分类失败
             return [];
         }
     }
@@ -366,7 +366,7 @@ class LocalStorageAdapter {
             const data = localStorage.getItem(this.prefix + 'websites_' + category);
             return data ? JSON.parse(data) : [];
         } catch (error) {
-            console.error('获取网站失败:', error);
+            // 获取网站失败
             return [];
         }
     }
@@ -379,7 +379,7 @@ class LocalStorageAdapter {
             localStorage.setItem(this.prefix + 'websites_' + website.category, JSON.stringify(websites));
             return website;
         } catch (error) {
-            console.error('添加网站失败:', error);
+            // 添加网站失败
             throw error;
         }
     }
@@ -394,7 +394,7 @@ class LocalStorageAdapter {
             }
             return website;
         } catch (error) {
-            console.error('更新网站失败:', error);
+            // 更新网站失败
             throw error;
         }
     }
@@ -405,7 +405,7 @@ class LocalStorageAdapter {
             const filteredWebsites = websites.filter(w => w.id !== id);
             localStorage.setItem(this.prefix + 'websites_' + category, JSON.stringify(filteredWebsites));
         } catch (error) {
-            console.error('删除网站失败:', error);
+            // 删除网站失败
             throw error;
         }
     }
@@ -418,7 +418,7 @@ class LocalStorageAdapter {
             localStorage.setItem(this.prefix + 'categories', JSON.stringify(categories));
             return category;
         } catch (error) {
-            console.error('添加分类失败:', error);
+            // 添加分类失败
             throw error;
         }
     }
@@ -433,7 +433,7 @@ class LocalStorageAdapter {
             }
             return category;
         } catch (error) {
-            console.error('更新分类失败:', error);
+            // 更新分类失败
             throw error;
         }
     }
@@ -444,7 +444,7 @@ class LocalStorageAdapter {
             const filteredCategories = categories.filter(c => c.id !== id);
             localStorage.setItem(this.prefix + 'categories', JSON.stringify(filteredCategories));
         } catch (error) {
-            console.error('删除分类失败:', error);
+            // 删除分类失败
             throw error;
         }
     }
@@ -458,7 +458,7 @@ let globalStorageIntegration = null;
  */
 async function initializeStorageIntegration() {
     if (globalStorageIntegration && globalStorageIntegration.isInitialized) {
-        console.log('存储集成系统已初始化');
+        // 存储集成系统已初始化
         return globalStorageIntegration;
     }
 

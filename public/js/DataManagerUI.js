@@ -44,9 +44,9 @@ class DataManagerUI {
             // 初始化数据
             await this._initializeData();
             
-            console.log('DataManagerUI initialized successfully');
+            // console.log('DataManagerUI initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize DataManagerUI:', error);
+            // console.error('Failed to initialize DataManagerUI:', error);
             this._showError('初始化数据管理界面失败: ' + error.message);
         }
     }
@@ -898,16 +898,24 @@ class DataManagerUI {
      * 显示成功消息
      */
     _showSuccess(message) {
-        // 这里可以集成通知系统
-        alert(message);
+        // 使用通用提示组件
+        if (typeof CustomModal !== 'undefined') {
+            CustomModal.showSuccess(message);
+        } else {
+            alert(message);
+        }
     }
     
     /**
      * 显示错误消息
      */
     _showError(message) {
-        // 这里可以集成通知系统
-        alert(message);
+        // 使用通用提示组件
+        if (typeof CustomModal !== 'undefined') {
+            CustomModal.showError(message);
+        } else {
+            alert(message);
+        }
     }
     
     /**

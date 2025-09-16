@@ -32,7 +32,7 @@ class PasswordManager {
         this.createPasswordModals();
         this.bindEvents();
         this.setupSessionManagement();
-        console.log('[PasswordManager] 密码管理器初始化完成');
+        // 密码管理器初始化完成
     }
 
     /**
@@ -1059,7 +1059,7 @@ class PasswordManager {
      */
     showSuccessMessage(message) {
         // 这里可以使用toast或其他通知组件
-        console.log('[PasswordManager] 成功:', message);
+        // 成功消息
         
         // 简单的临时通知
         this.showTemporaryMessage(message, 'success');
@@ -1070,7 +1070,7 @@ class PasswordManager {
      * @param {string} message 消息
      */
     showErrorMessage(message) {
-        console.error('[PasswordManager] 错误:', message);
+        // 错误消息
         this.showTemporaryMessage(message, 'error');
     }
 
@@ -1170,7 +1170,7 @@ class PasswordManager {
             }
         });
         
-        console.log('[PasswordManager] 密码管理器已销毁');
+        // 密码管理器已销毁
     }
 }
 

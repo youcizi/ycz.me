@@ -43,7 +43,7 @@ class DataManager {
             await this.db.init();
         }
         
-        console.log('[DataManager] 数据管理器初始化完成');
+        // 数据管理器初始化完成
     }
 
     // ==================== 数据导出功能 ====================
@@ -65,7 +65,7 @@ class DataManager {
         } = options;
 
         try {
-            console.log('[DataManager] 开始导出数据', { format, encrypt });
+            // 开始导出数据
 
             // 收集所有数据
             const exportData = await this.collectExportData({
@@ -116,10 +116,10 @@ class DataManager {
             // 触发下载
             this.downloadFile(processedData, finalFilename, mimeType);
 
-            console.log('[DataManager] 数据导出完成', result);
+            // 数据导出完成
             return result;
         } catch (error) {
-            console.error('[DataManager] 数据导出失败', error);
+            // 数据导出失败
             throw error;
         }
     }
@@ -182,7 +182,6 @@ class DataManager {
                     data: encryptedData
                 }, null, 2);
             } catch (error) {
-                console.error('[DataManager] 数据加密失败', error);
                 throw new Error('数据加密失败: ' + error.message);
             }
         }
@@ -387,7 +386,7 @@ class DataManager {
             console.log('[DataManager] 数据导入完成', result);
             return result;
         } catch (error) {
-            console.error('[DataManager] 数据导入失败', error);
+            // 数据导入失败
             throw error;
         }
     }
@@ -822,10 +821,10 @@ class DataManager {
             }
 
             if (toDelete.length > 0) {
-                console.log('[DataManager] 清理旧备份完成', { deleted: toDelete.length });
+                // 清理旧备份完成
             }
         } catch (error) {
-            console.error('[DataManager] 清理旧备份失败', error);
+            // 清理旧备份失败
         }
     }
 
@@ -1008,7 +1007,7 @@ class DataManager {
             const store = transaction.objectStore(this.db.stores.CACHE);
             return await this.db._promisifyRequest(store.getAll());
         } catch (error) {
-            console.error('[DataManager] 获取缓存数据失败', error);
+            // 获取缓存数据失败
             return [];
         }
     }
@@ -1021,7 +1020,7 @@ class DataManager {
         try {
             return await this.getBackupList();
         } catch (error) {
-            console.error('[DataManager] 获取备份数据失败', error);
+            // 获取备份数据失败
             return [];
         }
     }
@@ -1046,9 +1045,9 @@ class DataManager {
             // 清空设置（保留基本设置）
             await this.db._updateSettings({ id: 'main', createdAt: Date.now(), updatedAt: Date.now() });
 
-            console.log('[DataManager] 所有数据清空完成');
+            // 所有数据清空完成
         } catch (error) {
-            console.error('[DataManager] 清空数据失败', error);
+            // 清空数据失败
             throw error;
         }
     }

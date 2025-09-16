@@ -42,11 +42,54 @@ class NavigationDB {
             await this.clearExpiredCache();
             await this._clearExpiredSessions();
             
-            console.log('NavigationDB初始化成功');
+            // NavigationDB初始化成功
             return true;
         } catch (error) {
-            console.error('NavigationDB初始化失败:', error);
+            // NavigationDB初始化失败
             throw error;
+        }
+    }
+
+    /**
+     * 检查数据库连接状态
+     * @returns {boolean}
+     */
+    _isConnectionValid() {
+        return this.db && this.isInitialized && this.db.objectStoreNames && this.db.objectStoreNames.length >= 0;
+    }
+
+    /**
+     * 确保数据库连接有效
+     * @returns {Promise<void>}
+     */
+    async _ensureConnection() {
+        if (!this._isConnectionValid()) {
+            // 数据库连接无效，重新初始化
+            await this.init();
+        }
+    }
+
+    /**
+     * 安全执行数据库操作
+     * @param {Function} operation 数据库操作函数
+     * @param {number} retries 重试次数
+     * @returns {Promise<any>}
+     */
+    async _safeExecute(operation, retries = 2) {
+        for (let i = 0; i <= retries; i++) {
+            try {
+                await this._ensureConnection();
+                return await operation();
+            } catch (error) {
+                if (i === retries) {
+                    throw error;
+                }
+                // 数据库操作失败，重试
+                // 重置连接状态
+                this.isInitialized = false;
+                this.db = null;
+                await new Promise(resolve => setTimeout(resolve, 100 * (i + 1))); // 递增延迟
+            }
         }
     }
 
@@ -161,9 +204,9 @@ class NavigationDB {
                 await this._promisifyRequest(categoriesStore.add(category));
             }
             
-            console.log('初始数据插入成功');
+            // 初始数据插入成功
         } catch (error) {
-            console.error('插入初始数据失败:', error);
+            // 插入初始数据失败
             throw error;
         }
     }
@@ -179,7 +222,7 @@ class NavigationDB {
             const settings = await this.getSettings();
             return settings && settings.passwordHash !== null;
         } catch (error) {
-            console.error('检查密码状态失败:', error);
+            // 检查密码状态失败
             return false;
         }
     }
@@ -207,10 +250,10 @@ class NavigationDB {
             
             await this._updateSettings(settings);
             
-            console.log('密码设置成功');
+            // 密码设置成功
             return true;
         } catch (error) {
-            console.error('设置密码失败:', error);
+            // 设置密码失败
             throw error;
         }
     }
@@ -237,7 +280,7 @@ class NavigationDB {
             
             return isValid;
         } catch (error) {
-            console.error('验证密码失败:', error);
+            // 验证密码失败
             return false;
         }
     }
@@ -259,7 +302,7 @@ class NavigationDB {
             // 设置新密码
             return await this.setPassword(newPassword);
         } catch (error) {
-            console.error('修改密码失败:', error);
+            // 修改密码失败
             throw error;
         }
     }
@@ -286,7 +329,7 @@ class NavigationDB {
             
             this.currentSession = session;
         } catch (error) {
-            console.error('创建会话失败:', error);
+            // 创建会话失败
         }
     }
 
@@ -319,7 +362,7 @@ class NavigationDB {
                 cursor.continue();
             }
         } catch (error) {
-            console.error('清理过期会话失败:', error);
+            // 清理过期会话失败
         }
     }
 
@@ -327,11 +370,11 @@ class NavigationDB {
 
     /**
      * 获取网站列表
-     * @param {string} categoryId 分类ID，可选
+     * @param {string} categoryId 分类ID，为空则获取所有
      * @returns {Promise<Array>}
      */
     async getWebsites(categoryId = null) {
-        try {
+        return await this._safeExecute(async () => {
             const transaction = this.db.transaction([this.stores.WEBSITES], 'readonly');
             const store = transaction.objectStore(this.stores.WEBSITES);
             
@@ -343,12 +386,14 @@ class NavigationDB {
                 websites = await this._promisifyRequest(store.getAll());
             }
             
-            // 过滤已删除的网站
-            return websites.filter(website => !website.deleted);
-        } catch (error) {
-            console.error('获取网站列表失败:', error);
+            // 过滤已删除的网站并按更新时间排序
+            return websites
+                .filter(website => !website.deleted)
+                .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        }).catch(error => {
+            // 获取网站列表失败
             return [];
-        }
+        });
     }
 
     /**
@@ -357,7 +402,7 @@ class NavigationDB {
      * @returns {Promise<string>} 网站ID
      */
     async addWebsite(websiteData) {
-        try {
+        return await this._safeExecute(async () => {
             const website = {
                 id: this._generateId(),
                 name: websiteData.name,
@@ -377,12 +422,9 @@ class NavigationDB {
             const store = transaction.objectStore(this.stores.WEBSITES);
             await this._promisifyRequest(store.add(website));
             
-            console.log('网站添加成功:', website.name);
+            // 网站添加成功
             return website.id;
-        } catch (error) {
-            console.error('添加网站失败:', error);
-            throw error;
-        }
+        });
     }
 
     /**
@@ -392,7 +434,7 @@ class NavigationDB {
      * @returns {Promise<boolean>}
      */
     async updateWebsite(id, websiteData) {
-        try {
+        return await this._safeExecute(async () => {
             const transaction = this.db.transaction([this.stores.WEBSITES], 'readwrite');
             const store = transaction.objectStore(this.stores.WEBSITES);
             
@@ -405,17 +447,22 @@ class NavigationDB {
                 ...existingWebsite,
                 ...websiteData,
                 id: id, // 确保ID不被覆盖
+                categoryId: websiteData.categoryId || existingWebsite.categoryId || 'all', // 确保categoryId字段正确保存
                 updatedAt: Date.now()
             };
+            
+            console.log('IndexedDB更新网站数据:', {
+                id,
+                originalData: existingWebsite,
+                newData: websiteData,
+                finalData: updatedWebsite
+            });
 
             await this._promisifyRequest(store.put(updatedWebsite));
             
-            console.log('网站更新成功:', updatedWebsite.name);
+            // 网站更新成功
             return true;
-        } catch (error) {
-            console.error('更新网站失败:', error);
-            throw error;
-        }
+        });
     }
 
     /**
@@ -424,15 +471,23 @@ class NavigationDB {
      * @returns {Promise<boolean>}
      */
     async deleteWebsite(id) {
-        try {
-            return await this.updateWebsite(id, { 
-                deleted: true,
-                deletedAt: Date.now()
-            });
-        } catch (error) {
-            console.error('删除网站失败:', error);
-            throw error;
-        }
+        return await this._safeExecute(async () => {
+            const transaction = this.db.transaction([this.stores.WEBSITES], 'readwrite');
+            const store = transaction.objectStore(this.stores.WEBSITES);
+            
+            const website = await this._promisifyRequest(store.get(id));
+            if (!website) {
+                throw new Error('网站不存在');
+            }
+            
+            website.deleted = true;
+            website.deletedAt = Date.now();
+            website.updatedAt = Date.now();
+            
+            await this._promisifyRequest(store.put(website));
+            // 网站删除成功
+            return true;
+        });
     }
 
     /**
@@ -451,7 +506,7 @@ class NavigationDB {
                 website.url.toLowerCase().includes(searchQuery)
             );
         } catch (error) {
-            console.error('搜索网站失败:', error);
+            // 搜索网站失败
             return [];
         }
     }
@@ -463,7 +518,7 @@ class NavigationDB {
      * @returns {Promise<Array>}
      */
     async getCategories() {
-        try {
+        return await this._safeExecute(async () => {
             const transaction = this.db.transaction([this.stores.CATEGORIES], 'readonly');
             const store = transaction.objectStore(this.stores.CATEGORIES);
             const index = store.index('order');
@@ -474,10 +529,10 @@ class NavigationDB {
             return categories
                 .filter(category => !category.deleted)
                 .sort((a, b) => a.order - b.order);
-        } catch (error) {
-            console.error('获取分类列表失败:', error);
+        }).catch(error => {
+            // 获取分类列表失败
             return [];
-        }
+        });
     }
 
     /**
@@ -506,10 +561,10 @@ class NavigationDB {
             const store = transaction.objectStore(this.stores.CATEGORIES);
             await this._promisifyRequest(store.add(category));
             
-            console.log('分类添加成功:', category.name);
+            // 分类添加成功
             return category.id;
         } catch (error) {
-            console.error('添加分类失败:', error);
+            // 添加分类失败
             throw error;
         }
     }
@@ -539,10 +594,10 @@ class NavigationDB {
 
             await this._promisifyRequest(store.put(updatedCategory));
             
-            console.log('分类更新成功:', updatedCategory.name);
+            // 分类更新成功
             return true;
         } catch (error) {
-            console.error('更新分类失败:', error);
+            // 更新分类失败
             throw error;
         }
     }
@@ -565,7 +620,71 @@ class NavigationDB {
                 deletedAt: Date.now()
             });
         } catch (error) {
-            console.error('删除分类失败:', error);
+            // 删除分类失败
+            throw error;
+        }
+    }
+
+    /**
+     * 批量保存分类数据（用于从服务器同步）
+     * @param {Array} categories 
+     * @returns {Promise<boolean>}
+     */
+    async saveCategories(categories) {
+        try {
+            const transaction = this.db.transaction([this.stores.CATEGORIES], 'readwrite');
+            const store = transaction.objectStore(this.stores.CATEGORIES);
+            
+            // 清空现有分类数据
+            await this._promisifyRequest(store.clear());
+            
+            // 批量添加新分类数据
+            for (const category of categories) {
+                const categoryData = {
+                    ...category,
+                    id: category.id || this._generateId(), // 确保有id字段
+                    updatedAt: Date.now(),
+                    deleted: category.deleted || false
+                };
+                await this._promisifyRequest(store.add(categoryData));
+            }
+            
+            // 批量保存分类数据成功
+            return true;
+        } catch (error) {
+            // 批量保存分类数据失败
+            throw error;
+        }
+    }
+
+    /**
+     * 批量保存网站数据（用于从服务器同步）
+     * @param {Array} websites 
+     * @returns {Promise<boolean>}
+     */
+    async saveWebsites(websites) {
+        try {
+            const transaction = this.db.transaction([this.stores.WEBSITES], 'readwrite');
+            const store = transaction.objectStore(this.stores.WEBSITES);
+            
+            // 清空现有网站数据
+            await this._promisifyRequest(store.clear());
+            
+            // 批量添加新网站数据
+            for (const website of websites) {
+                const websiteData = {
+                    ...website,
+                    id: website.id || this._generateId(), // 确保有id字段
+                    updatedAt: Date.now(),
+                    deleted: website.deleted || false
+                };
+                await this._promisifyRequest(store.add(websiteData));
+            }
+            
+            // 批量保存网站数据成功
+            return true;
+        } catch (error) {
+            // 批量保存网站数据失败
             throw error;
         }
     }
@@ -600,7 +719,7 @@ class NavigationDB {
             
             return JSON.parse(cacheEntry.value);
         } catch (error) {
-            console.error('获取缓存失败:', error);
+            // 获取缓存失败
             return null;
         }
     }
@@ -636,7 +755,7 @@ class NavigationDB {
             
             await this._promisifyRequest(store.add(cacheEntry));
         } catch (error) {
-            console.error('设置缓存失败:', error);
+            // 设置缓存失败
         }
     }
 
@@ -644,7 +763,7 @@ class NavigationDB {
      * 清理过期缓存
      */
     async clearExpiredCache() {
-        try {
+        return await this._safeExecute(async () => {
             const transaction = this.db.transaction([this.stores.CACHE], 'readwrite');
             const store = transaction.objectStore(this.stores.CACHE);
             const index = store.index('expiry');
@@ -658,9 +777,7 @@ class NavigationDB {
                 }
                 cursor.continue();
             }
-        } catch (error) {
-            console.error('清理过期缓存失败:', error);
-        }
+        });
     }
 
     /**
@@ -672,7 +789,7 @@ class NavigationDB {
             const store = transaction.objectStore(this.stores.CACHE);
             await this._promisifyRequest(store.clear());
         } catch (error) {
-            console.error('清空缓存失败:', error);
+            // 清空缓存失败
         }
     }
 
@@ -683,14 +800,11 @@ class NavigationDB {
      * @returns {Promise<Object>}
      */
     async getSettings() {
-        try {
+        return await this._safeExecute(async () => {
             const transaction = this.db.transaction([this.stores.SETTINGS], 'readonly');
             const store = transaction.objectStore(this.stores.SETTINGS);
             return await this._promisifyRequest(store.get('main'));
-        } catch (error) {
-            console.error('获取设置失败:', error);
-            return null;
-        }
+        });
     }
 
     /**
@@ -698,14 +812,11 @@ class NavigationDB {
      * @param {Object} settings 
      */
     async _updateSettings(settings) {
-        try {
+        return await this._safeExecute(async () => {
             const transaction = this.db.transaction([this.stores.SETTINGS], 'readwrite');
             const store = transaction.objectStore(this.stores.SETTINGS);
             await this._promisifyRequest(store.put(settings));
-        } catch (error) {
-            console.error('更新设置失败:', error);
-            throw error;
-        }
+        });
     }
 
     // ==================== 统计信息 ====================
@@ -732,7 +843,7 @@ class NavigationDB {
                 percentage: 0
             };
         } catch (error) {
-            console.error('获取存储信息失败:', error);
+            // 获取存储信息失败
             return { used: 0, available: 0, total: 0, percentage: 0 };
         }
     }
@@ -753,7 +864,7 @@ class NavigationDB {
                 totalSize: 0 // 可以后续计算实际大小
             };
         } catch (error) {
-            console.error('获取数据统计失败:', error);
+            // 获取数据统计失败
             return { websites: 0, categories: 0, lastUpdated: Date.now(), totalSize: 0 };
         }
     }
@@ -798,7 +909,7 @@ class NavigationDB {
             const store = transaction.objectStore(this.stores.CACHE);
             await this._promisifyRequest(store.delete(id));
         } catch (error) {
-            console.error('删除缓存条目失败:', error);
+            // 删除缓存条目失败
         }
     }
 
@@ -818,7 +929,7 @@ class NavigationDB {
                 await this._promisifyRequest(store.put(entry));
             }
         } catch (error) {
-            console.error('更新缓存访问信息失败:', error);
+            // 更新缓存访问信息失败
         }
     }
 
