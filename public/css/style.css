@@ -117,6 +117,7 @@ body {
   flex: 1;
   padding: 20px 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .nav-item {
@@ -2542,7 +2543,7 @@ footer p + p {
 
 .emoji-btn {
   background: none;
-  border: 2px solid transparent;
+  outline: 2px solid transparent;
   border-radius: 8px;
   padding: 8px;
   font-size: 20px;
@@ -2557,13 +2558,13 @@ footer p + p {
 .emoji-btn:hover {
   background: #f3f4f6;
   border-color: #e5e7eb;
-  transform: scale(1.1);
+  /* transform: scale(1.1); */
 }
 
 .emoji-btn.selected {
   background: #dbeafe;
   border-color: #3b82f6;
-  transform: scale(1.1);
+  /* transform: scale(1.1); */
 }
 
 .emoji-picker-footer {
