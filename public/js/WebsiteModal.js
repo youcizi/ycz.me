@@ -105,8 +105,9 @@ async function showEditWebsiteModal(websiteData) {
     // 更新分类选择器
     await updateCategorySelector();
     
-    // 直接填充表单数据
-    document.getElementById('websiteName').value = website.name || '';
+    // 直接填充表单数据 - 统一使用name和title字段
+    const websiteName = website.name || website.title || '';
+    document.getElementById('websiteName').value = websiteName;
     document.getElementById('websiteDescription').value = website.description || '';
     document.getElementById('websiteUrl').value = website.url || '';
     document.getElementById('websiteIcon').value = website.icon || '';
@@ -303,8 +304,10 @@ function initWebsiteModalEvents() {
         }
       }
       
+      const websiteName = formData.get('websiteName');
       const websiteData = {
-        name: formData.get('websiteName'),
+        name: websiteName,
+        title: websiteName, // 同时设置title字段以保持兼容性
         description: formData.get('websiteDescription'),
         url: formData.get('websiteUrl'),
         icon: formData.get('websiteIcon'),

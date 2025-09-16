@@ -125,9 +125,32 @@ const app = createApp({
         }, { deep: true });
         
         // 分类相关方法
-        const selectCategory = (categoryId) => {
-            console.log('选择分类:', categoryId);
-            currentCategory.value = categoryId === 'all' ? null : categoryId;
+        const selectCategory = (categoryData) => {
+            console.log('选择分类:', categoryData);
+            
+            // 处理分类ID和名称
+            let categoryId, categoryName;
+            if (categoryData === null || categoryData === 'all') {
+                categoryId = null;
+                categoryName = '全部';
+            } else if (typeof categoryData === 'object' && categoryData.id) {
+                categoryId = categoryData.id;
+                categoryName = categoryData.name;
+            } else {
+                categoryId = categoryData;
+                const category = categories.value.find(c => c.id === categoryData);
+                categoryName = category ? category.name : '全部';
+            }
+            
+            currentCategory.value = categoryId;
+            
+            // 同步到NavigationApp（如果存在）
+            if (window.navigationApp && typeof window.navigationApp.handleCategoryChangeFromEvent === 'function') {
+                window.navigationApp.handleCategoryChangeFromEvent(categoryName);
+            }
+            
+            // 重新应用筛选
+            applyFilters();
         };
         
         const showAddCategoryModal = () => {
@@ -272,8 +295,15 @@ const app = createApp({
         
         const showEditWebsiteModal = (website) => {
             console.log('显示编辑网站模态框:', website);
-            // 填充表单数据
-            Object.assign(websiteForm, { ...website });
+            // 填充表单数据，确保字段映射正确
+            Object.assign(websiteForm, {
+                title: website.name || website.title || '', // 使用name字段填充title表单字段
+                url: website.url || '',
+                description: website.description || '',
+                categoryId: website.categoryId || '',
+                icon: website.icon || '🌐',
+                paymentType: website.paymentType || ''
+            });
             editingWebsite.value = website;
             
             // 显示模态框
@@ -525,14 +555,18 @@ const app = createApp({
         const applyFilters = () => {
             try {
                 console.log('应用筛选条件 - 分类:', currentCategory.value, '搜索:', searchKeyword.value);
+                console.log('当前网站数据:', websites.value);
                 
                 let filtered = [...(websites.value || [])];
                 
                 // 按分类筛选
                 if (currentCategory.value) {
-                    filtered = filtered.filter(website => 
-                        website && website.categoryId === currentCategory.value
-                    );
+                    console.log('筛选前网站数量:', filtered.length);
+                    console.log('筛选条件 categoryId:', currentCategory.value);
+                    filtered = filtered.filter(website => {
+                        console.log('检查网站:', website.name, 'categoryId:', website.categoryId, '匹配:', website.categoryId === currentCategory.value);
+                        return website && website.categoryId === currentCategory.value;
+                    });
                     console.log('分类筛选后:', filtered.length, '个网站');
                 }
                 
