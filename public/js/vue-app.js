@@ -383,50 +383,54 @@ const app = createApp({
             }
         };
         
-        // 图标选择器相关方法
+        // 图标选择器相关方法 - 使用新的EmojiIconPicker组件
+        let emojiPicker = null;
+        
+        const initEmojiPicker = () => {
+            if (!emojiPicker) {
+                emojiPicker = new EmojiIconPicker();
+            }
+        };
+        
         const showIconSelector = (type) => {
             console.log('显示图标选择器:', type);
-            iconSelector.show = true;
-            iconSelector.type = type;
-            iconSelector.selected = '';
+            initEmojiPicker();
             
-            // 使用UI管理器显示模态框
-            nextTick(() => {
-                uiManager.showModal('icon-selector-modal');
-            });
+            // 设置选择回调
+            const callback = (selectedEmoji) => {
+                console.log('选择的emoji:', selectedEmoji);
+                if (selectedEmoji) {
+                    if (type === 'category') {
+                        categoryForm.icon = selectedEmoji;
+                    } else if (type === 'website') {
+                        websiteForm.icon = selectedEmoji;
+                    }
+                }
+            };
+            
+            // 显示emoji选择器
+            emojiPicker.show(callback);
         };
         
         const closeIconSelector = () => {
             console.log('关闭图标选择器');
-            iconSelector.show = false;
-            iconSelector.type = '';
-            iconSelector.selected = '';
-            
-            // 使用UI管理器关闭模态框
-            uiManager.closeModal('icon-selector-modal');
+            if (emojiPicker) {
+                emojiPicker.hide();
+            }
         };
         
+        // 保持向后兼容的方法
         const selectIcon = (icon) => {
             console.log('选择图标:', icon);
-            iconSelector.selected = icon;
+            // 这个方法现在由EmojiIconPicker内部处理
         };
         
         const selectIconCategory = (categoryName) => {
-            iconSelector.selectedCategory = categoryName;
+            // 这个方法现在由EmojiIconPicker内部处理
         };
         
         const confirmIconSelection = () => {
-            console.log('确认图标选择:', iconSelector.selected, iconSelector.type);
-            
-            if (iconSelector.selected) {
-                if (iconSelector.type === 'category') {
-                    categoryForm.icon = iconSelector.selected;
-                } else if (iconSelector.type === 'website') {
-                    websiteForm.icon = iconSelector.selected;
-                }
-            }
-            
-            closeIconSelector();
+            // 这个方法现在由EmojiIconPicker内部处理
         };
         
         // 使用导入的管理器实例
