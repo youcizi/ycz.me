@@ -554,15 +554,16 @@
 }
 
 .empty-icon {
-    font-size: 48px;
+    font-size: 158px;
     margin-bottom: 16px;
     opacity: 0.6;
 }
 
 .empty-text {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 26px;
     margin-bottom: 4px;
+	text-align: center;
+	color: #222;
 }
 
 .empty-desc {
