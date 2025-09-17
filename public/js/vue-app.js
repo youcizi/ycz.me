@@ -27,6 +27,7 @@ const app = createApp({
         const currentCategory = ref(null);
         const searchKeyword = ref('');
         const currentFilter = ref('all');
+        const expandedCategories = ref(new Set()); // 记录展开的分类ID
         
         // 模态框状态 - 使用响应式对象
         const modals = reactive({
@@ -65,7 +66,8 @@ const app = createApp({
         // 表单数据 - 使用响应式对象
         const categoryForm = reactive({
             name: '',
-            icon: '📁'
+            icon: '📁',
+            parentId: ''
         });
         
         const websiteForm = reactive({
@@ -107,6 +109,59 @@ const app = createApp({
             const category = categories.value.find(c => c.id === currentCategory.value);
             return category ? category.name : '全部';
         });
+        
+        // 获取可用的父级分类（排除当前编辑的分类及其子分类）
+        const availableParentCategories = computed(() => {
+            if (!categories.value.length) return [];
+            
+            // 如果是编辑模式，需要排除当前分类及其子分类
+            if (editingCategory.value) {
+                const currentId = editingCategory.value.id;
+                return categories.value.filter(category => {
+                    // 排除自己
+                    if (category.id === currentId) return false;
+                    // 排除已经是当前分类子分类的分类（防止循环引用）
+                    if (category.parentId === currentId) return false;
+                    // 只显示一级分类作为可选父级
+                    return !category.parentId;
+                });
+            }
+            
+            // 添加模式下，显示所有一级分类
+            return categories.value.filter(category => !category.parentId);
+        });
+        
+        // 获取一级分类（用于层级显示）
+        const topLevelCategories = computed(() => {
+            return categories.value.filter(category => !category.parentId);
+        });
+        
+        // 获取指定分类的子分类
+        const getSubCategories = (parentId) => {
+            return categories.value.filter(category => category.parentId === parentId);
+        };
+        
+        // 检查分类是否有子分类
+        const hasSubCategories = (categoryId) => {
+            return categories.value.some(category => category.parentId === categoryId);
+        };
+        
+        // 切换分类展开状态
+        const toggleCategoryExpansion = (categoryId) => {
+            const expanded = expandedCategories.value;
+            if (expanded.has(categoryId)) {
+                expanded.delete(categoryId);
+            } else {
+                expanded.add(categoryId);
+            }
+            // 触发响应式更新
+            expandedCategories.value = new Set(expanded);
+        };
+        
+        // 检查分类是否展开
+        const isCategoryExpanded = (categoryId) => {
+            return expandedCategories.value.has(categoryId);
+        };
         
         // 监听器
         watch(searchKeyword, (newKeyword) => {
@@ -153,7 +208,7 @@ const app = createApp({
         const showAddCategoryModal = () => {
             console.log('显示添加分类模态框');
             // 重置表单
-            Object.assign(categoryForm, { name: '', icon: '📁' });
+            Object.assign(categoryForm, { name: '', icon: '📁', parentId: '' });
             editingCategory.value = null;
             
             // 显示模态框
@@ -168,7 +223,11 @@ const app = createApp({
         const showEditCategoryModal = (category) => {
             console.log('显示编辑分类模态框:', category);
             // 填充表单数据
-            Object.assign(categoryForm, { ...category });
+            Object.assign(categoryForm, { 
+                name: category.name || '',
+                icon: category.icon || '📁',
+                parentId: category.parentId || ''
+            });
             editingCategory.value = category;
             
             // 显示模态框
@@ -188,7 +247,7 @@ const app = createApp({
             modals.editCategory = false;
             
             // 重置表单和编辑状态
-            Object.assign(categoryForm, { name: '', icon: '📁' });
+            Object.assign(categoryForm, { name: '', icon: '📁', parentId: '' });
             editingCategory.value = null;
             
             // 使用UI管理器关闭模态框
@@ -208,19 +267,19 @@ const app = createApp({
                 
                 isLoading.value = true;
                 
+                const categoryData = {
+                    name: categoryForm.name.trim(),
+                    icon: categoryForm.icon,
+                    parentId: categoryForm.parentId || null
+                };
+                
                 if (editingCategory.value) {
                     // 更新分类
-                    await categoryManager.updateCategory(editingCategory.value.id, {
-                        name: categoryForm.name.trim(),
-                        icon: categoryForm.icon
-                    });
+                    await categoryManager.updateCategory(editingCategory.value.id, categoryData);
                     uiManager.showNotification('分类更新成功', 'success');
                 } else {
                     // 添加分类
-                    await categoryManager.addCategory({
-                        name: categoryForm.name.trim(),
-                        icon: categoryForm.icon
-                    });
+                    await categoryManager.addCategory(categoryData);
                     uiManager.showNotification('分类添加成功', 'success');
                 }
                 
@@ -852,6 +911,11 @@ const app = createApp({
             hasCurrentCategory,
             currentCategoryName,
             currentIcons,
+            availableParentCategories,
+            topLevelCategories,
+            
+            // 层级相关数据
+            expandedCategories,
             
             // 分类方法
             selectCategory,
@@ -860,6 +924,12 @@ const app = createApp({
             closeCategoryModal,
             saveCategory,
             deleteCategory,
+            
+            // 层级相关方法
+            getSubCategories,
+            hasSubCategories,
+            toggleCategoryExpansion,
+            isCategoryExpanded,
             
             // 网站方法
             showAddWebsiteModal,

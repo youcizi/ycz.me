@@ -5,7 +5,7 @@
 class IndexedDBService {
     constructor() {
         this.dbName = 'NavigationDB';
-        this.dbVersion = 1;
+        this.dbVersion = 2;
         this.db = null;
         this.isInitialized = false;
     }
@@ -33,6 +33,7 @@ class IndexedDBService {
 
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
+                    const oldVersion = event.oldVersion;
                     
                     try {
                         // 创建分类表
@@ -43,6 +44,19 @@ class IndexedDBService {
                             });
                             categoryStore.createIndex('name', 'name', { unique: true });
                             categoryStore.createIndex('order', 'order', { unique: false });
+                            categoryStore.createIndex('parentId', 'parentId', { unique: false });
+                        }
+                        
+                        // 版本2：添加parentId字段支持
+                        if (oldVersion < 2) {
+                            if (db.objectStoreNames.contains('categories')) {
+                                // 为现有分类表添加parentId索引
+                                const transaction = event.target.transaction;
+                                const categoryStore = transaction.objectStore('categories');
+                                if (!categoryStore.indexNames.contains('parentId')) {
+                                    categoryStore.createIndex('parentId', 'parentId', { unique: false });
+                                }
+                            }
                         }
 
                         // 创建网站表
@@ -177,6 +191,18 @@ class IndexedDBService {
                 category.id = this.generateId();
             }
 
+            // 验证parentId（如果提供）
+            if (category.parentId) {
+                const parentCategory = await this.getCategoryById(category.parentId);
+                if (!parentCategory) {
+                    throw new Error('指定的父级分类不存在');
+                }
+                // 防止循环引用
+                if (category.parentId === category.id) {
+                    throw new Error('不能将分类设置为自己的子分类');
+                }
+            }
+
             // 设置默认值
             const categoryData = {
                 id: category.id,
@@ -185,6 +211,7 @@ class IndexedDBService {
                 color: category.color || '#3b82f6',
                 description: category.description || '',
                 order: category.order || 0,
+                parentId: category.parentId || null,
                 createdAt: category.createdAt || new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
@@ -229,11 +256,31 @@ class IndexedDBService {
                 throw new Error('分类不存在');
             }
 
+            // 验证parentId（如果提供）
+            if (category.parentId !== undefined) {
+                if (category.parentId) {
+                    const parentCategory = await this.getCategoryById(category.parentId);
+                    if (!parentCategory) {
+                        throw new Error('指定的父级分类不存在');
+                    }
+                    // 防止循环引用
+                    if (category.parentId === category.id) {
+                        throw new Error('不能将分类设置为自己的子分类');
+                    }
+                    // 防止设置为自己的子分类
+                    const childCategories = await this.getChildCategories(category.id);
+                    if (childCategories.some(child => child.id === category.parentId)) {
+                        throw new Error('不能将分类设置为自己子分类的子分类');
+                    }
+                }
+            }
+
             // 合并数据
             const updatedCategory = {
                 ...existingCategory,
                 ...category,
                 name: category.name.trim(),
+                parentId: category.parentId !== undefined ? category.parentId : existingCategory.parentId,
                 updatedAt: new Date().toISOString()
             };
 
@@ -263,7 +310,15 @@ class IndexedDBService {
                 throw new Error('分类不存在');
             }
 
-            // 先删除该分类下的所有网站
+            // 获取所有子分类
+            const childCategories = await this.getChildCategories(categoryId);
+            
+            // 递归删除所有子分类
+            for (const childCategory of childCategories) {
+                await this.deleteCategory(childCategory.id);
+            }
+
+            // 删除该分类下的所有网站
             const websites = await this.getWebsitesByCategory(categoryId);
             for (const website of websites) {
                 await this.deleteWebsite(website.id);
@@ -488,6 +543,83 @@ class IndexedDBService {
         } catch (error) {
             console.error('删除网站失败:', error);
             throw error;
+        }
+    }
+
+    // ==================== 分类层级方法 ====================
+
+    /**
+     * 获取子分类
+     */
+    async getChildCategories(parentId) {
+        try {
+            const categories = await this.executeTransaction('categories', 'readonly', (store) => {
+                const index = store.index('parentId');
+                return index.getAll(parentId);
+            });
+            return categories || [];
+        } catch (error) {
+            console.error('获取子分类失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 获取顶级分类（没有父分类的分类）
+     */
+    async getTopLevelCategories() {
+        try {
+            const allCategories = await this.getCategories();
+            return allCategories.filter(category => !category.parentId);
+        } catch (error) {
+            console.error('获取顶级分类失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 获取分类的所有祖先分类
+     */
+    async getCategoryAncestors(categoryId) {
+        try {
+            const ancestors = [];
+            let currentCategory = await this.getCategoryById(categoryId);
+            
+            while (currentCategory && currentCategory.parentId) {
+                const parent = await this.getCategoryById(currentCategory.parentId);
+                if (parent) {
+                    ancestors.unshift(parent);
+                    currentCategory = parent;
+                } else {
+                    break;
+                }
+            }
+            
+            return ancestors;
+        } catch (error) {
+            console.error('获取祖先分类失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 获取分类的所有后代分类
+     */
+    async getCategoryDescendants(categoryId) {
+        try {
+            const descendants = [];
+            const children = await this.getChildCategories(categoryId);
+            
+            for (const child of children) {
+                descendants.push(child);
+                const grandChildren = await this.getCategoryDescendants(child.id);
+                descendants.push(...grandChildren);
+            }
+            
+            return descendants;
+        } catch (error) {
+            console.error('获取后代分类失败:', error);
+            return [];
         }
     }
 

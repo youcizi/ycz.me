@@ -58,23 +58,59 @@
                     <span class="nav-icon">📁</span>
                     <span class="nav-text">全部</span>
                 </button>
-                <button 
-                    v-for="category in categories" 
-                    :key="category.id"
-                    class="nav-item" 
-                    :class="{ active: currentCategory?.id === category.id }"
-                    :data-category="category.name"
-                    :data-category-id="category.id"
-                    type="button"
-                    @click="selectCategory(category)"
-                >
-                    <span class="nav-icon">{{ category.icon }}</span>
-                    <span class="nav-text">{{ category.name }}</span>
-                    <div class="nav-actions">
-                        <span class="action-icon edit-category" @click.stop="showEditCategoryModal(category)">✏️</span>
-                        <span class="action-icon delete-category" @click.stop="deleteCategory(category.id)">🗑️</span>
-                    </div>
-                </button>
+                
+                <!-- 层级分类显示 -->
+                <template v-for="category in topLevelCategories" :key="category.id">
+                    <!-- 一级分类 -->
+                    <button 
+                        class="nav-item parent-category" 
+                        :class="{ active: currentCategory?.id === category.id }"
+                        :data-category="category.name"
+                        :data-category-id="category.id"
+                        type="button"
+                        @click="selectCategory(category)"
+                    >
+                        <!-- 展开/收缩图标 -->
+                        <span 
+                            v-if="hasSubCategories(category.id)" 
+                            class="expand-icon"
+                            @click.stop="toggleCategoryExpansion(category.id)"
+                        >
+                            {{ isCategoryExpanded(category.id) ? '▼' : '▶' }}
+                        </span>
+                        <span v-else class="expand-placeholder"></span>
+                        
+                        <span class="nav-icon">{{ category.icon }}</span>
+                        <span class="nav-text">{{ category.name }}</span>
+                        <div class="nav-actions">
+                            <span class="action-icon edit-category" @click.stop="showEditCategoryModal(category)">✏️</span>
+                            <span class="action-icon delete-category" @click.stop="deleteCategory(category.id)">🗑️</span>
+                        </div>
+                    </button>
+                    
+                    <!-- 二级分类（子分类） -->
+                    <template v-if="hasSubCategories(category.id) && isCategoryExpanded(category.id)">
+                        <button 
+                            v-for="subCategory in getSubCategories(category.id)" 
+                            :key="subCategory.id"
+                            class="nav-item sub-category" 
+                            :class="{ active: currentCategory?.id === subCategory.id }"
+                            :data-category="subCategory.name"
+                            :data-category-id="subCategory.id"
+                            type="button"
+                            @click="selectCategory(subCategory)"
+                        >
+                            <span class="sub-category-indent"></span>
+                            <span class="nav-icon">{{ subCategory.icon }}</span>
+                            <span class="nav-text">{{ subCategory.name }}</span>
+                            <div class="nav-actions">
+                                <span class="action-icon edit-category" @click.stop="showEditCategoryModal(subCategory)">✏️</span>
+                                <span class="action-icon delete-category" @click.stop="deleteCategory(subCategory.id)">🗑️</span>
+                            </div>
+                        </button>
+                    </template>
+                </template>
+                
                 <!-- 添加分类按钮 -->
                 <button class="nav-item add-category-btn" type="button" @click="showAddCategoryModal">
                     <span class="nav-icon">➕</span>
@@ -193,6 +229,17 @@
                            placeholder="请输入分类名称">
                 </div>
                 <div class="form-group">
+                    <label for="categoryParent">父级分类</label>
+                    <select id="categoryParent" v-model="categoryForm.parentId">
+                        <option value="">无（创建一级分类）</option>
+                        <option v-for="category in availableParentCategories" 
+                                :key="category.id" 
+                                :value="category.id">
+                            {{ category.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="categoryIcon">分类图标</label>
                     <div class="icon-input">
                         <input type="text" 
@@ -229,6 +276,17 @@
                            id="editCategoryName" 
                            v-model="categoryForm.name" 
                            placeholder="请输入分类名称">
+                </div>
+                <div class="form-group">
+                    <label for="editCategoryParent">父级分类</label>
+                    <select id="editCategoryParent" v-model="categoryForm.parentId">
+                        <option value="">无（创建一级分类）</option>
+                        <option v-for="category in availableParentCategories" 
+                                :key="category.id" 
+                                :value="category.id">
+                            {{ category.name }}
+                        </option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="editCategoryIcon">分类图标</label>
