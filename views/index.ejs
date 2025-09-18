@@ -314,7 +314,7 @@
     <div class="modal-overlay" v-show="modals.addWebsite" @click="closeWebsiteModal">
         <div class="modal-content" @click.stop>
             <div class="modal-header">
-                <h3>{{ websiteForm.id ? '编辑网站' : '添加网站' }}</h3>
+                <h3>{{ editingWebsite ? '编辑网站' : '添加网站' }}</h3>
                 <button class="close-btn" @click="closeWebsiteModal">✕</button>
             </div>
             <div class="modal-body">

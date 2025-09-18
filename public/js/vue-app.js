@@ -342,11 +342,6 @@ const app = createApp({
             
             // 显示模态框
             modals.addWebsite = true;
-            
-            // 使用UI管理器显示模态框
-            nextTick(() => {
-                uiManager.showModal('add-website-modal');
-            });
         };
         
         const showEditWebsiteModal = (website) => {
@@ -362,13 +357,8 @@ const app = createApp({
             });
             editingWebsite.value = website;
             
-            // 显示模态框
-            modals.editWebsite = true;
-            
-            // 使用UI管理器显示模态框
-            nextTick(() => {
-                uiManager.showModal('edit-website-modal');
-            });
+            // 显示模态框（复用添加网站的模态框）
+            modals.addWebsite = true;
         };
         
         const closeWebsiteModal = () => {
@@ -388,10 +378,6 @@ const app = createApp({
                 paymentType: ''
             });
             editingWebsite.value = null;
-            
-            // 使用UI管理器关闭模态框
-            uiManager.closeModal('add-website-modal');
-            uiManager.closeModal('edit-website-modal');
         };
         
         const saveWebsite = async () => {
