@@ -314,7 +314,7 @@
     <div class="modal-overlay" v-show="modals.addWebsite" @click="closeWebsiteModal">
         <div class="modal-content" @click.stop>
             <div class="modal-header">
-                <h3>添加网站</h3>
+                <h3>{{ websiteForm.id ? '编辑网站' : '添加网站' }}</h3>
                 <button class="close-btn" @click="closeWebsiteModal">✕</button>
             </div>
             <div class="modal-body">
@@ -382,77 +382,7 @@
         </div>
     </div>
     
-    <!-- 编辑网站模态框 -->
-    <div class="modal-overlay" v-show="modals.editWebsite" @click="closeWebsiteModal">
-        <div class="modal-content" @click.stop>
-            <div class="modal-header">
-                <h3>编辑网站</h3>
-                <button class="close-btn" @click="closeWebsiteModal">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="editWebsiteName">网站名称</label>
-                    <input type="text" 
-                           id="editWebsiteName" 
-                           v-model="websiteForm.title" 
-                           placeholder="请输入网站名称">
-                </div>
-                <div class="form-group">
-                    <label for="editWebsiteUrl">网站地址</label>
-                    <input type="url" 
-                           id="editWebsiteUrl" 
-                           v-model="websiteForm.url" 
-                           placeholder="请输入网站地址">
-                </div>
-                <div class="form-group">
-                    <label for="editWebsiteDescription">网站描述</label>
-                    <textarea id="editWebsiteDescription" 
-                              v-model="websiteForm.description" 
-                              placeholder="请输入网站描述"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="editWebsiteCategory">所属分类</label>
-                    <select id="editWebsiteCategory" v-model="websiteForm.categoryId">
-                        <option value="">请选择分类</option>
-                        <option v-for="category in categories" 
-                                :key="category.id" 
-                                :value="category.id">
-                            {{ category.name }}
-                        </option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editWebsiteIcon">网站图标</label>
-                    <div class="icon-input">
-                        <input type="text" 
-                               class="icon-preview-input" 
-                               v-model="websiteForm.icon" 
-                               placeholder="输入或选择图标"
-                               maxlength="10">
-                        <button type="button" 
-                                class="icon-picker-btn" 
-                                @click="showIconSelector('website', websiteForm.icon)">
-                            选择图标
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="editWebsitePaymentType">付费类型</label>
-                    <select id="editWebsitePaymentType" v-model="websiteForm.paymentType">
-                        <option value="">请选择付费类型</option>
-                        <option value="free">免费</option>
-                        <option value="paid">付费</option>
-                        <option value="trial">试用</option>
-                        <option value="points">送积分</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" @click="closeWebsiteModal">取消</button>
-                <button class="btn btn-primary" @click="saveWebsite">保存</button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- 图标选择器模态框 -->
     <div class="modal-overlay" v-show="modals.iconSelector" @click="closeIconSelector">
@@ -495,28 +425,19 @@
 
 
     
-    <!-- 保留必要的工具类 -->
     <link rel="stylesheet" href="/css/password-manager.css">
     <link rel="stylesheet" href="/css/data-manager.css">
     
     <script src="/js/CryptoUtils.js"></script>
-    
-    <!-- 通用模块 -->
     <script src="/js/CustomModal.js"></script>
     <script src="/js/EmojiIconPicker.js"></script>
     
-    <!-- 模块化脚本 -->
     <script type="module" src="/js/services/IndexedDBService.js"></script>
     <script type="module" src="/js/services/DataSyncService.js"></script>
     <script type="module" src="/js/modules/CategoryManager.js"></script>
     <script type="module" src="/js/modules/WebsiteManager.js"></script>
     <script type="module" src="/js/modules/UIManager.js"></script>
     <script type="module" src="/js/vue-app.js"></script>
-    
-    <!-- Vue3 应用初始化 -->
-    <script>
-        // Vue3 应用将在 vue-app.js 中初始化
-    </script>
     
     <!-- 结构化数据 -->
     <script type="application/ld+json">
