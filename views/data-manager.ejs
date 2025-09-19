@@ -21,8 +21,7 @@
     <script src="/js/vue.global.js"></script>
     <!-- Axios CDN -->
     <script src="/js/axios.min.js"></script>
-    <!-- SheetJS for Excel support -->
-    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 </head>
 <body>
     <div id="app">
@@ -35,71 +34,115 @@
         </div>
 
         <!-- 主内容区域 -->
-        <main class="main-content data-manager-main">
+        <main class="data-manager-main">
             <div class="data-manager-container">
-                <!-- 页面标题 -->
-                <header class="page-header">
-                    <h1>📊 数据管理</h1>
-                    <p class="page-description">导入导出您的网站数据，支持JSON和Excel格式</p>
-                </header>
 
-                <!-- 操作区域 -->
-                <div class="action-section">
-                    <!-- 导入区域 -->
-                    <div class="import-section">
-                        <h2>📥 数据导入</h2>
-                        <div class="import-area">
+                <!-- 页面头部 -->
+                <div class="page-header">
+                    <h1>
+                        <i class="fas fa-database"></i>
+                        数据管理中心
+                    </h1>
+                </div>
+
+                <!-- 主内容区域 -->
+                <div class="main-content" id="app" style="margin-left:0;">
+                    <!-- 状态消息 -->
+                    <div v-if="statusMessage" 
+                         class="status-message" 
+                         :class="statusMessage.type">
+                        <i class="status-icon" :class="getStatusIcon(statusMessage.type)"></i>
+                        <span class="status-text">{{ statusMessage.text }}</span>
+                    </div>
+
+                    <!-- 导入导出操作区 -->
+                    <div class="action-section">
+                        <!-- 导入区域 -->
+                        <div class="import-section">
+                            <div class="section-header">
+                                <h3><i class="fas fa-upload"></i> 导入数据</h3>
+                                <p class="section-desc">支持导入JSON格式的网站和分类数据</p>
+                            </div>
+                            
                             <div class="file-drop-zone" 
+                                 @drop="handleFileDrop" 
+                                 @dragover.prevent 
+                                 @dragenter.prevent
                                  :class="{ 'drag-over': isDragOver }"
-                                 @dragover.prevent="handleDragOver"
-                                 @dragleave.prevent="handleDragLeave"
-                                 @drop.prevent="handleFileDrop">
-                                <div class="drop-zone-content">
-                                    <div class="upload-icon">📁</div>
-                                    <p class="drop-text">拖拽文件到此处或点击选择文件</p>
-                                    <p class="file-types">支持 JSON、Excel (.xlsx, .xls) 格式</p>
-                                    <input type="file" 
-                                           ref="fileInput"
-                                           @change="handleFileSelect"
-                                           accept=".json,.xlsx,.xls"
-                                           class="file-input">
-                                    <button class="select-file-btn" @click="$refs.fileInput.click()">选择文件</button>
+                                 @dragenter="isDragOver = true"
+                                 @dragleave="isDragOver = false">
+                                <input type="file" 
+                                       ref="fileInput"
+                                       id="fileInput" 
+                                       accept=".json" 
+                                       @change="handleFileSelect" 
+                                       style="display: none;">
+                                <div class="upload-content">
+                                    <i class="upload-icon fas fa-cloud-upload-alt"></i>
+                                    <div class="drop-text">拖拽JSON文件到此处</div>
+                                    <div class="drop-subtext">或者</div>
+                                    <button type="button" class="btn btn-outline" @click="$refs.fileInput.click()">
+                                        <i class="fas fa-folder-open"></i>
+                                        选择文件
+                                    </button>
                                 </div>
                             </div>
                             
-                            <!-- 文件信息显示 -->
                             <div v-if="selectedFile" class="file-info">
                                 <div class="file-details">
-                                    <span class="file-name">{{ selectedFile.name }}</span>
-                                    <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+                                    <div class="file-icon">
+                                        <i class="fas fa-file-code"></i>
+                                    </div>
+                                    <div class="file-meta">
+                                        <div class="file-name">{{ selectedFile.name }}</div>
+                                        <div class="file-size">{{ formatFileSize(selectedFile.size) }}</div>
+                                    </div>
                                 </div>
-                                <button class="btn btn-primary" @click="importData" :disabled="isImporting">
-                                    {{ isImporting ? '导入中...' : '开始导入' }}
-                                </button>
+                                <div class="file-actions">
+                                    <button class="btn btn-primary" @click="importData">
+                                        <i class="fas fa-download"></i>
+                                        导入数据
+                                    </button>
+                                    <button class="btn btn-outline" @click="clearFile">
+                                        <i class="fas fa-times"></i>
+                                        清除
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- 导出区域 -->
-                    <div class="export-section">
-                        <h2>📤 数据导出</h2>
-                        <div class="export-options">
+                        <!-- 导出区域 -->
+                        <div class="export-section">
+                            <div class="section-header">
+                                <h3><i class="fas fa-download"></i> 导出数据</h3>
+                                <p class="section-desc">将当前数据导出为JSON格式文件</p>
+                            </div>
+                            
                             <div class="export-stats">
                                 <div class="stat-item">
-                                    <span class="stat-label">网站数量:</span>
-                                    <span class="stat-value">{{ stats.websites }}</span>
+                                    <div class="stat-icon">
+                                        <i class="fas fa-globe"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ websiteCount }}</div>
+                                        <div class="stat-label">网站数量</div>
+                                    </div>
                                 </div>
                                 <div class="stat-item">
-                                    <span class="stat-label">分类数量:</span>
-                                    <span class="stat-value">{{ stats.categories }}</span>
+                                    <div class="stat-icon">
+                                        <i class="fas fa-folder"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ categoryCount }}</div>
+                                        <div class="stat-label">分类数量</div>
+                                    </div>
                                 </div>
                             </div>
+                            
                             <div class="export-buttons">
-                                <button class="btn btn-outline" @click="exportData('json')" :disabled="isExporting">
-                                    {{ isExporting && exportType === 'json' ? '导出中...' : '导出为 JSON' }}
-                                </button>
-                                <button class="btn btn-outline" @click="exportData('excel')" :disabled="isExporting">
-                                    {{ isExporting && exportType === 'excel' ? '导出中...' : '导出为 Excel' }}
+                                <button class="btn btn-primary" @click="exportData">
+                                    <i class="fas fa-file-export"></i>
+                                    导出为JSON
                                 </button>
                             </div>
                         </div>

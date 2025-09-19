@@ -11,20 +11,16 @@ const DataManagerApp = {
             isDragOver: false,
             isImporting: false,
             isExporting: false,
-            exportType: '',
             
             // 数据预览
             previewData: null,
             
             // 状态消息
-            statusMessage: '',
-            statusType: 'info', // 'success', 'error', 'info'
+            statusMessage: null,
             
             // 统计信息
-            stats: {
-                websites: 0,
-                categories: 0
-            },
+            websiteCount: 0,
+            categoryCount: 0,
             
             // IndexedDB 服务实例
             dbService: null
@@ -57,23 +53,16 @@ const DataManagerApp = {
                 const websites = await this.dbService.getWebsites();
                 const categories = await this.dbService.getCategories();
                 
-                this.stats.websites = websites.length;
-                this.stats.categories = categories.length;
+                this.websiteCount = websites.length;
+                this.categoryCount = categories.length;
             } catch (error) {
                 console.error('加载统计信息失败:', error);
             }
         },
         
         // 拖拽处理
-        handleDragOver(event) {
-            this.isDragOver = true;
-        },
-        
-        handleDragLeave(event) {
-            this.isDragOver = false;
-        },
-        
         handleFileDrop(event) {
+            event.preventDefault();
             this.isDragOver = false;
             const files = event.dataTransfer.files;
             if (files.length > 0) {
@@ -91,16 +80,26 @@ const DataManagerApp = {
         
         handleFileSelection(file) {
             // 验证文件类型
-            const allowedTypes = ['.json', '.xlsx', '.xls'];
+            const allowedTypes = ['.json'];
             const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
             
             if (!allowedTypes.includes(fileExtension)) {
-                this.showStatus('不支持的文件格式，请选择 JSON 或 Excel 文件', 'error');
+                this.showStatus('不支持的文件格式，请选择 JSON 文件', 'error');
                 return;
             }
             
             this.selectedFile = file;
             this.showStatus(`已选择文件: ${file.name}`, 'info');
+        },
+        
+        // 清除文件
+        clearFile() {
+            this.selectedFile = null;
+            this.previewData = null;
+            if (this.$refs.fileInput) {
+                this.$refs.fileInput.value = '';
+            }
+            this.showStatus('已清除选择的文件', 'info');
         },
         
         // 格式化文件大小
@@ -122,16 +121,7 @@ const DataManagerApp = {
             this.isImporting = true;
             
             try {
-                const fileExtension = '.' + this.selectedFile.name.split('.').pop().toLowerCase();
-                let data;
-                
-                if (fileExtension === '.json') {
-                    data = await this.readJSONFile(this.selectedFile);
-                } else if (['.xlsx', '.xls'].includes(fileExtension)) {
-                    data = await this.readExcelFile(this.selectedFile);
-                } else {
-                    throw new Error('不支持的文件格式');
-                }
+                const data = await this.readJSONFile(this.selectedFile);
                 
                 // 验证数据格式
                 const validationResult = this.validateImportData(data);
@@ -140,9 +130,31 @@ const DataManagerApp = {
                     return;
                 }
                 
-                // 显示预览
-                this.previewData = data;
-                this.showStatus('数据预览已生成，请确认后导入', 'info');
+                // 直接导入数据
+                let importedWebsites = 0;
+                let importedCategories = 0;
+                
+                // 导入分类数据
+                if (data.categories && data.categories.length > 0) {
+                    for (const category of data.categories) {
+                        await this.dbService.addCategory(category);
+                        importedCategories++;
+                    }
+                }
+                
+                // 导入网站数据
+                if (data.websites && data.websites.length > 0) {
+                    for (const website of data.websites) {
+                        await this.dbService.addWebsite(website);
+                        importedWebsites++;
+                    }
+                }
+                
+                // 更新统计信息
+                await this.loadStats();
+                
+                this.showStatus(`导入成功！导入了 ${importedWebsites} 个网站，${importedCategories} 个分类`, 'success');
+                this.clearFile();
                 
             } catch (error) {
                 console.error('导入失败:', error);
@@ -169,41 +181,7 @@ const DataManagerApp = {
             });
         },
         
-        // 读取 Excel 文件
-        readExcelFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        
-                        const result = {
-                            websites: [],
-                            categories: []
-                        };
-                        
-                        // 读取网站数据
-                        if (workbook.SheetNames.includes('websites')) {
-                            const websiteSheet = workbook.Sheets['websites'];
-                            result.websites = XLSX.utils.sheet_to_json(websiteSheet);
-                        }
-                        
-                        // 读取分类数据
-                        if (workbook.SheetNames.includes('categories')) {
-                            const categorySheet = workbook.Sheets['categories'];
-                            result.categories = XLSX.utils.sheet_to_json(categorySheet);
-                        }
-                        
-                        resolve(result);
-                    } catch (error) {
-                        reject(new Error('Excel 文件解析失败'));
-                    }
-                };
-                reader.onerror = () => reject(new Error('文件读取失败'));
-                reader.readAsArrayBuffer(file);
-            });
-        },
+
         
         // 验证导入数据格式
         validateImportData(data) {
@@ -237,64 +215,16 @@ const DataManagerApp = {
             return { valid: true };
         },
         
-        // 确认导入
-        async confirmImport() {
-            if (!this.previewData) return;
-            
-            try {
-                this.isImporting = true;
-                
-                let importedWebsites = 0;
-                let importedCategories = 0;
-                
-                // 导入分类数据
-                if (this.previewData.categories && this.previewData.categories.length > 0) {
-                    for (const category of this.previewData.categories) {
-                        await this.dbService.addCategory(category);
-                        importedCategories++;
-                    }
-                }
-                
-                // 导入网站数据
-                if (this.previewData.websites && this.previewData.websites.length > 0) {
-                    for (const website of this.previewData.websites) {
-                        await this.dbService.addWebsite(website);
-                        importedWebsites++;
-                    }
-                }
-                
-                // 更新统计信息
-                await this.loadStats();
-                
-                this.showStatus(`导入成功！导入了 ${importedWebsites} 个网站，${importedCategories} 个分类`, 'success');
-                this.cancelImport();
-                
-            } catch (error) {
-                console.error('导入失败:', error);
-                this.showStatus('导入失败: ' + error.message, 'error');
-            } finally {
-                this.isImporting = false;
-            }
-        },
-        
-        // 取消导入
-        cancelImport() {
-            this.previewData = null;
-            this.selectedFile = null;
-            if (this.$refs.fileInput) {
-                this.$refs.fileInput.value = '';
-            }
-        },
+
         
         // 导出数据
-        async exportData(format) {
+        async exportData() {
             this.isExporting = true;
-            this.exportType = format;
             
             try {
                 // 获取所有数据
-                const websites = await this.dbService.getAllWebsites();
-                const categories = await this.dbService.getAllCategories();
+                const websites = await this.dbService.getWebsites();
+                const categories = await this.dbService.getCategories();
                 
                 const exportData = {
                     websites,
@@ -303,20 +233,14 @@ const DataManagerApp = {
                     version: '1.0'
                 };
                 
-                if (format === 'json') {
-                    this.exportAsJSON(exportData);
-                } else if (format === 'excel') {
-                    this.exportAsExcel(exportData);
-                }
-                
-                this.showStatus(`数据导出成功 (${format.toUpperCase()})`, 'success');
+                this.exportAsJSON(exportData);
+                this.showStatus('数据导出成功', 'success');
                 
             } catch (error) {
                 console.error('导出失败:', error);
                 this.showStatus('导出失败: ' + error.message, 'error');
             } finally {
                 this.isExporting = false;
-                this.exportType = '';
             }
         },
         
@@ -336,44 +260,29 @@ const DataManagerApp = {
             URL.revokeObjectURL(url);
         },
         
-        // 导出为 Excel
-        exportAsExcel(data) {
-            const workbook = XLSX.utils.book_new();
-            
-            // 创建网站工作表
-            if (data.websites && data.websites.length > 0) {
-                const websiteSheet = XLSX.utils.json_to_sheet(data.websites);
-                XLSX.utils.book_append_sheet(workbook, websiteSheet, 'websites');
-            }
-            
-            // 创建分类工作表
-            if (data.categories && data.categories.length > 0) {
-                const categorySheet = XLSX.utils.json_to_sheet(data.categories);
-                XLSX.utils.book_append_sheet(workbook, categorySheet, 'categories');
-            }
-            
-            // 创建信息工作表
-            const infoSheet = XLSX.utils.json_to_sheet([{
-                exportTime: data.exportTime,
-                version: data.version,
-                websiteCount: data.websites.length,
-                categoryCount: data.categories.length
-            }]);
-            XLSX.utils.book_append_sheet(workbook, infoSheet, 'info');
-            
-            // 下载文件
-            XLSX.writeFile(workbook, `website-data-${new Date().toISOString().split('T')[0]}.xlsx`);
-        },
+
         
         // 显示状态消息
         showStatus(message, type = 'info') {
-            this.statusMessage = message;
-            this.statusType = type;
+            this.statusMessage = {
+                text: message,
+                type: type
+            };
             
             // 自动清除消息
             setTimeout(() => {
-                this.statusMessage = '';
+                this.statusMessage = null;
             }, 5000);
+        },
+        
+        // 获取状态图标
+        getStatusIcon(type) {
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                info: 'fas fa-info-circle'
+            };
+            return icons[type] || icons.info;
         }
     }
 };
