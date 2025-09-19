@@ -41,8 +41,6 @@ const DataManagerApp = {
             
             // 加载统计信息
             await this.loadStats();
-            
-            this.showStatus('数据管理页面已加载', 'success');
         } catch (error) {
             console.error('初始化失败:', error);
             this.showStatus('初始化失败: ' + error.message, 'error');
@@ -483,10 +481,8 @@ const DataManagerApp = {
                 backupBtn.addEventListener('click', () => {
                     console.log('备份按钮被点击');
                     this.exportData();
-                    // 备份完成后关闭对话框
-                    setTimeout(() => {
-                        this.cancelImport();
-                    }, 1000);
+                    // 备份完成后不关闭对话框，让用户可以继续确认导入
+                    this.showStatus('数据备份完成，您现在可以安全地进行导入操作', 'success');
                 });
             }
             
