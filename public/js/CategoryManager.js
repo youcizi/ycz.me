@@ -518,7 +518,7 @@ class CategoryManager {
             // 刷新页面以确保数据同步
             setTimeout(() => {
                 window.location.reload();
-            }, 2000);
+            }, 1500);
             // 发射分类删除事件，传递删除的分类信息
             this.eventBus.emit('categoryDeleted', category);
             

@@ -797,7 +797,7 @@ const DataManagerApp = {
                 // 刷新页面数据
                 setTimeout(() => {
                     window.location.reload();
-                }, 2000);
+                }, 1500);
                 
             } catch (error) {
                 console.error('导入失败:', error);

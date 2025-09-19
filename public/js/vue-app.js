@@ -335,7 +335,7 @@ const app = createApp({
                 uiManager.showNotification('分类删除成功', 'success');
                 setTimeout(() => {
                 	window.location.reload();            
-            	}, 2000);
+            	}, 1500);
             } catch (error) {
                 console.error('删除分类失败:', error);
                 uiManager.showNotification('删除分类失败: ' + error.message, 'error');
