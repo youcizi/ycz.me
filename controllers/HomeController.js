@@ -27,6 +27,22 @@ class HomeController {
       ctx.body = { success: false, message: '服务器内部错误' };
     }
   }
+
+  /**
+   * 渲染数据管理页面
+   * @param {Object} ctx Koa上下文对象
+   */
+  async dataManager(ctx) {
+    try {
+      await ctx.render('data-manager', {
+        title: '数据管理 - 网站导航'
+      });
+    } catch (error) {
+      console.error('渲染数据管理页面失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
 }
 
 module.exports = HomeController;

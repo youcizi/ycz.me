@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - 数据管理</title>
+    <meta name="description" content="数据导入导出管理，支持JSON和Excel格式">
+    <meta name="keywords" content="数据管理,导入导出,JSON,Excel">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/data-manager.css">
+    
+    <!-- Vue 3 CDN -->
+    <script src="/js/vue.global.js"></script>
+    <!-- Axios CDN -->
+    <script src="/js/axios.min.js"></script>
+    <!-- SheetJS for Excel support -->
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航栏 -->
+        <div class="top-bar">
+            <div class="top-nav-links">
+                <a href="/" class="nav-link">返回首页</a>
+                <span class="nav-link active">数据管理</span>
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <main class="main-content data-manager-main">
+            <div class="data-manager-container">
+                <!-- 页面标题 -->
+                <header class="page-header">
+                    <h1>📊 数据管理</h1>
+                    <p class="page-description">导入导出您的网站数据，支持JSON和Excel格式</p>
+                </header>
+
+                <!-- 操作区域 -->
+                <div class="action-section">
+                    <!-- 导入区域 -->
+                    <div class="import-section">
+                        <h2>📥 数据导入</h2>
+                        <div class="import-area">
+                            <div class="file-drop-zone" 
+                                 :class="{ 'drag-over': isDragOver }"
+                                 @dragover.prevent="handleDragOver"
+                                 @dragleave.prevent="handleDragLeave"
+                                 @drop.prevent="handleFileDrop">
+                                <div class="drop-zone-content">
+                                    <div class="upload-icon">📁</div>
+                                    <p class="drop-text">拖拽文件到此处或点击选择文件</p>
+                                    <p class="file-types">支持 JSON、Excel (.xlsx, .xls) 格式</p>
+                                    <input type="file" 
+                                           ref="fileInput"
+                                           @change="handleFileSelect"
+                                           accept=".json,.xlsx,.xls"
+                                           class="file-input">
+                                    <button class="select-file-btn" @click="$refs.fileInput.click()">选择文件</button>
+                                </div>
+                            </div>
+                            
+                            <!-- 文件信息显示 -->
+                            <div v-if="selectedFile" class="file-info">
+                                <div class="file-details">
+                                    <span class="file-name">{{ selectedFile.name }}</span>
+                                    <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+                                </div>
+                                <button class="btn btn-primary" @click="importData" :disabled="isImporting">
+                                    {{ isImporting ? '导入中...' : '开始导入' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 导出区域 -->
+                    <div class="export-section">
+                        <h2>📤 数据导出</h2>
+                        <div class="export-options">
+                            <div class="export-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">网站数量:</span>
+                                    <span class="stat-value">{{ stats.websites }}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">分类数量:</span>
+                                    <span class="stat-value">{{ stats.categories }}</span>
+                                </div>
+                            </div>
+                            <div class="export-buttons">
+                                <button class="btn btn-outline" @click="exportData('json')" :disabled="isExporting">
+                                    {{ isExporting && exportType === 'json' ? '导出中...' : '导出为 JSON' }}
+                                </button>
+                                <button class="btn btn-outline" @click="exportData('excel')" :disabled="isExporting">
+                                    {{ isExporting && exportType === 'excel' ? '导出中...' : '导出为 Excel' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据预览区域 -->
+                <div v-if="previewData" class="preview-section">
+                    <h2>👀 数据预览</h2>
+                    <div class="preview-content">
+                        <div class="preview-summary">
+                            <p>检测到 {{ previewData.websites?.length || 0 }} 个网站，{{ previewData.categories?.length || 0 }} 个分类</p>
+                        </div>
+                        <div class="preview-actions">
+                            <button class="btn btn-secondary" @click="cancelImport">取消</button>
+                            <button class="btn btn-primary" @click="confirmImport">确认导入</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 状态消息 -->
+                <div v-if="statusMessage" class="status-message" :class="statusType">
+                    <span class="status-icon">{{ statusType === 'success' ? '✅' : statusType === 'error' ? '❌' : 'ℹ️' }}</span>
+                    <span class="status-text">{{ statusMessage }}</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script type="module" src="/js/data-manager.js"></script>
+</body>
+</html>

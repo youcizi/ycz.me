@@ -16,6 +16,9 @@ const apiController = new ApiController();
 // 主页路由
 router.get('/', homeController.index.bind(homeController));
 
+// 数据管理页面路由
+router.get('/data-manager', homeController.dataManager.bind(homeController));
+
 // API路由
 router.get('/api/websites/:category', apiController.getWebsitesByCategory.bind(apiController));
 router.get('/api/search', apiController.searchWebsites.bind(apiController));
