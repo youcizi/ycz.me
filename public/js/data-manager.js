@@ -427,6 +427,12 @@ const DataManagerApp = {
 
         // 显示导入警告
         showImportWarning() {
+            // 检查是否已存在警告对话框
+            const existingOverlay = document.getElementById('importWarningOverlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+            
             const warningHtml = `
                 <div class="import-warning-overlay" id="importWarningOverlay">
                     <div class="import-warning-dialog">
@@ -446,7 +452,7 @@ const DataManagerApp = {
                                  <h4>✅ 确认步骤：</h4>
                                  <p>1. 点击"先备份数据"保存当前数据（推荐）</p>
                                  <p>2. 或点击"取消"终止操作</p>
-                                 <p>3. 如确定继续，请再次点击"导入数据"按钮</p>
+                                 <p>3. 如确定继续，请点击"确认导入"按钮</p>
                              </div>
                          </div>
                         <div class="warning-actions">
@@ -458,7 +464,7 @@ const DataManagerApp = {
                 </div>
             `;
             
-            // 添加警告对话框到页面
+            // 添加警告对话框到页面（只添加一次）
             document.body.insertAdjacentHTML('beforeend', warningHtml);
             
             // 绑定事件监听器
@@ -467,11 +473,15 @@ const DataManagerApp = {
             const confirmBtn = document.getElementById('confirmImportBtn');
             
             if (cancelBtn) {
-                cancelBtn.addEventListener('click', () => this.cancelImport());
+                cancelBtn.addEventListener('click', () => {
+                    console.log('取消按钮被点击');
+                    this.cancelImport();
+                });
             }
             
             if (backupBtn) {
                 backupBtn.addEventListener('click', () => {
+                    console.log('备份按钮被点击');
                     this.exportData();
                     // 备份完成后关闭对话框
                     setTimeout(() => {
@@ -482,14 +492,12 @@ const DataManagerApp = {
             
             if (confirmBtn) {
                 confirmBtn.addEventListener('click', () => {
+                    console.log('确认导入按钮被点击');
                     this.cancelImport();
                     // 继续导入流程
                     this.proceedWithImport();
                 });
             }
-            
-            // 添加警告对话框到页面
-            document.body.insertAdjacentHTML('beforeend', warningHtml);
             
             // 添加样式
             if (!document.getElementById('importWarningStyles')) {
