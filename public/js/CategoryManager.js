@@ -515,12 +515,19 @@ class CategoryManager {
             }
             
             CustomModal.showSuccess('分类删除成功');
+            
+            // 发射分类删除事件，传递删除的分类信息
+            this.eventBus.emit('categoryDeleted', category);
+            
             await this.loadCategories();
             
             // 同步更新添加网站弹窗的分类选择器
             if (typeof updateCategorySelector === 'function') {
                 await updateCategorySelector();
             }
+            
+            // 刷新页面以确保数据同步
+            window.location.reload();
             
         } catch (error) {
             // 删除分类失败

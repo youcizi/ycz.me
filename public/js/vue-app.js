@@ -298,7 +298,23 @@ const app = createApp({
         };
         
         const deleteCategory = async (categoryId) => {
-            if (!await CustomModal.showConfirm('确定要删除这个分类吗？删除后该分类下的所有网站也会被删除。')) {
+            // 获取分类信息以显示更详细的警告
+            const category = categories.value.find(cat => cat.id === categoryId);
+            const categoryName = category ? category.name : '该分类';
+            
+            // 使用更醒目的警告样式
+            if (!await CustomModal.showConfirm(
+                `⚠️ 警告：删除分类将会永久删除以下内容：\n\n` +
+                `• 分类：${categoryName}\n` +
+                `• 该分类下的所有网站\n` +
+                `• 该分类的所有子分类及其网站\n\n` +
+                `此操作不可撤销，请谨慎操作！`,
+                '⚠️ 危险操作确认',
+                {
+                    confirmText: '确认删除',
+                    cancelText: '取消'
+                }
+            )) {
                 return;
             }
             
@@ -437,7 +453,22 @@ const app = createApp({
         };
         
         const deleteWebsite = async (websiteId) => {
-            if (!await CustomModal.showConfirm('确定要删除这个网站吗？')) {
+            if (!websiteId) {
+                console.warn('删除网站: 网站ID为空');
+                return;
+            }
+            
+            // 检查网站是否存在于本地数据中
+            const websiteExists = websites.value.find(site => site.id === websiteId);
+            if (!websiteExists) {
+                console.warn(`网站 ${websiteId} 不存在，从UI中移除`);
+                // 直接从UI中移除（可能是数据不同步导致的）
+                websites.value = websites.value.filter(site => site.id !== websiteId);
+                applyFilters();
+                return;
+            }
+            
+            if (!await CustomModal.showConfirm(`确定要删除网站 "${websiteExists.name || websiteExists.title}" 吗？`)) {
                 return;
             }
             
@@ -445,16 +476,32 @@ const app = createApp({
                 console.log('删除网站:', websiteId);
                 isLoading.value = true;
                 
-                await websiteManager.deleteWebsite(websiteId);
+                const result = await websiteManager.deleteWebsite(websiteId);
                 
-                // 重新加载数据
+                if (result === false) {
+                    // 网站不存在或已被删除，但操作成功完成
+                    console.log('网站已被清理，无需进一步操作');
+                    uiManager.showNotification('网站已删除', 'info');
+                } else {
+                    // 正常删除成功
+                    uiManager.showNotification('网站删除成功', 'success');
+                }
+                
+                // 重新加载数据以确保UI同步
                 await loadData();
-                
-                uiManager.showNotification('网站删除成功', 'success');
                 
             } catch (error) {
                 console.error('删除网站失败:', error);
-                uiManager.showNotification('删除网站失败: ' + error.message, 'error');
+                
+                // 根据错误类型提供不同的用户提示
+                if (error.message && error.message.includes('网站不存在')) {
+                    // 网站不存在，清理UI数据
+                    websites.value = websites.value.filter(site => site.id !== websiteId);
+                    applyFilters();
+                    uiManager.showNotification('网站已不存在，已从列表中移除', 'info');
+                } else {
+                    uiManager.showNotification('删除网站失败: ' + error.message, 'error');
+                }
             } finally {
                 isLoading.value = false;
             }
@@ -687,23 +734,36 @@ const app = createApp({
             }
         };
         
-        const handleCategoryDeleted = (categoryId) => {
-            console.log('分类删除事件:', categoryId);
-            if (categoryId) {
-                // 删除分类
-                categories.value = categories.value.filter(cat => cat.id !== categoryId);
-                
-                // 删除该分类下的所有网站
-                websites.value = websites.value.filter(site => site.categoryId !== categoryId);
-                
-                // 如果删除的是当前选中的分类，切换到全部
-                if (currentCategory.value === categoryId) {
-                    currentCategory.value = null;
-                }
-                
-                applyFilters();
-            }
-        };
+        const handleCategoryDeleted = (deletedCategory) => {
+             console.log('分类删除事件:', deletedCategory);
+             if (deletedCategory && deletedCategory.id) {
+                 const categoryId = deletedCategory.id;
+                 const categoryName = deletedCategory.name;
+                 
+                 // 删除分类
+                 categories.value = categories.value.filter(cat => cat.id !== categoryId);
+                 
+                 // 将该分类下的网站更新为"未分类"
+                 websites.value = websites.value.map(site => {
+                     if (site.category === categoryName) {
+                         return { ...site, category: '未分类' };
+                     }
+                     return site;
+                 });
+                 
+                 // 如果删除的是当前选中的分类，切换到全部
+                 if (currentCategory.value && currentCategory.value.id === categoryId) {
+                     currentCategory.value = null;
+                 }
+                 
+                 // 重新加载数据以确保同步
+                 loadWebsites().then(() => {
+                     applyFilters();
+                 });
+                 
+                 console.log(`已从UI中移除分类 "${deletedCategory.name}"，其下的网站已移动到"未分类"`);
+             }
+         };
         
         const handleWebsiteAdded = (website) => {
             console.log('网站添加事件:', website);

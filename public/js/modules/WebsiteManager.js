@@ -333,19 +333,38 @@ class WebsiteManager {
             await this.init();
             
             if (!websiteId) {
-                throw new Error('网站ID不能为空');
+                console.warn('删除网站: 网站ID为空，跳过删除操作');
+                return false;
             }
             
             // 查找要删除的网站
             const websiteToDelete = this.getWebsiteById(websiteId);
             if (!websiteToDelete) {
-                throw new Error(`未找到网站: ${websiteId}`);
+                console.warn(`删除网站: 网站 ${websiteId} 不存在或已被删除，跳过删除操作`);
+                // 从本地数据中移除（如果存在）
+                const deletedIndex = this.websites.findIndex(site => site.id === websiteId);
+                if (deletedIndex !== -1) {
+                    this.websites.splice(deletedIndex, 1);
+                    this.filterWebsites();
+                    this.emit('websitesLoaded', this.websites);
+                    this.emit('filteredWebsitesChanged', this.filteredWebsites);
+                }
+                return false;
             }
             
             console.log(`删除网站: ${websiteToDelete.name}`);
             
-            // 删除数据库中的网站
-            await dataSyncService.deleteWebsite(websiteId);
+            try {
+                // 删除数据库中的网站
+                await dataSyncService.deleteWebsite(websiteId);
+            } catch (dbError) {
+                // 如果数据库中不存在，记录警告但继续处理本地数据
+                if (dbError.message && dbError.message.includes('网站不存在')) {
+                    console.warn(`数据库中网站 ${websiteId} 不存在，仅清理本地数据`);
+                } else {
+                    throw dbError;
+                }
+            }
             
             // 更新本地数据
             const deletedIndex = this.websites.findIndex(site => site.id === websiteId);
