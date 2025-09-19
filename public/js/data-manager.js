@@ -341,7 +341,7 @@ const DataManagerApp = {
         
 
         
-        // 导出数据
+        // 导出数据（用于备份等场景）
         async exportData() {
             this.isExporting = true;
             
@@ -357,7 +357,7 @@ const DataManagerApp = {
                     version: '1.0'
                 };
                 
-                this.exportAsJSON(exportData);
+                this.exportAsJSONInternal(exportData);
                 this.showStatus('数据导出成功', 'success');
                 
             } catch (error) {
@@ -368,8 +368,48 @@ const DataManagerApp = {
             }
         },
         
-        // 导出为 JSON
-        exportAsJSON(data) {
+        // 导出为 JSON（按钮点击方法）
+        async exportAsJSON() {
+            this.isExporting = true;
+            
+            try {
+                // 获取所有数据
+                const websites = await this.dbService.getWebsites();
+                const categories = await this.dbService.getCategories();
+                
+                const exportData = {
+                    websites,
+                    categories,
+                    exportTime: new Date().toISOString(),
+                    version: '1.0'
+                };
+                
+                // 导出JSON文件
+                const jsonString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `website-data-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                URL.revokeObjectURL(url);
+                
+                this.showStatus('JSON文件导出成功', 'success');
+                
+            } catch (error) {
+                console.error('导出JSON失败:', error);
+                this.showStatus('导出JSON失败: ' + error.message, 'error');
+            } finally {
+                this.isExporting = false;
+            }
+        },
+        
+        // 导出为 JSON（内部方法，用于备份等场景）
+        exportAsJSONInternal(data) {
             const jsonString = JSON.stringify(data, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
