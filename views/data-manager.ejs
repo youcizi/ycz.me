@@ -61,7 +61,7 @@
                         <div class="import-section">
                             <div class="section-header">
                                 <h3><i class="fas fa-upload"></i> 导入数据</h3>
-                                <p class="section-desc">支持导入JSON格式的网站和分类数据</p>
+                                <p class="section-desc">支持导入JSON和Excel格式的网站和分类数据</p>
                             </div>
                             
                             <div class="file-drop-zone" 
@@ -74,12 +74,12 @@
                                 <input type="file" 
                                        ref="fileInput"
                                        id="fileInput" 
-                                       accept=".json" 
+                                       accept=".json,.xlsx,.xls" 
                                        @change="handleFileSelect" 
                                        style="display: none;">
                                 <div class="upload-content">
                                     <i class="upload-icon fas fa-cloud-upload-alt"></i>
-                                    <div class="drop-text">拖拽JSON文件到此处</div>
+                                    <div class="drop-text">拖拽JSON或Excel文件到此处</div>
                                     <div class="drop-subtext">或者</div>
                                     <button type="button" class="btn btn-outline" @click="$refs.fileInput.click()">
                                         <i class="fas fa-folder-open"></i>
@@ -140,13 +140,13 @@
                             </div>
                             
                             <div class="export-buttons">
-                                <button class="btn btn-primary" @click="exportData">
-                                    <i class="fas fa-file-export"></i>
-                                    导出为JSON
+                                <button @click="exportAsJSON" class="export-btn json-btn">
+                                    <i class="fas fa-download"></i>
+                                    导出为 JSON
                                 </button>
-                                <button class="btn btn-success" @click="exportExcel">
+                                <button @click="exportExcel" class="export-btn excel-btn">
                                     <i class="fas fa-file-excel"></i>
-                                    导出为Excel
+                                    导出为 Excel
                                 </button>
                             </div>
                         </div>

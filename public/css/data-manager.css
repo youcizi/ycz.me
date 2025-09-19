@@ -714,6 +714,77 @@
     flex-wrap: wrap;
 }
 
+/* 导出按钮样式 */
+.export-btn {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: none;
+    border-radius: 12px;
+    padding: 12px 24px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+}
+
+.export-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.export-btn:hover::before {
+    left: 100%;
+}
+
+.export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+    background: linear-gradient(135deg, #4338ca, #6d28d9);
+}
+
+.export-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+}
+
+/* JSON导出按钮特定样式 */
+.json-btn {
+    background: linear-gradient(135deg, #059669, #047857);
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.json-btn:hover {
+    background: linear-gradient(135deg, #047857, #065f46);
+    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
+}
+
+/* Excel导出按钮特定样式 */
+.excel-btn {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+}
+
+.excel-btn:hover {
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+}
+
 /* 数据预览区域 */
 .preview-section {
     background: rgba(255, 255, 255, 0.95);

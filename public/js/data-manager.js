@@ -81,11 +81,11 @@ const DataManagerApp = {
         
         handleFileSelection(file) {
             // 验证文件类型
-            const allowedTypes = ['.json'];
+            const allowedTypes = ['.json', '.xlsx', '.xls'];
             const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
             
             if (!allowedTypes.includes(fileExtension)) {
-                this.showStatus('不支持的文件格式，请选择 JSON 文件', 'error');
+                this.showStatus('不支持的文件格式，请选择 JSON 或 Excel 文件', 'error');
                 return;
             }
             
@@ -131,7 +131,17 @@ const DataManagerApp = {
             this.isImporting = true;
             
             try {
-                const data = await this.readJSONFile(this.selectedFile);
+                // 根据文件类型选择读取方法
+                const fileExtension = '.' + this.selectedFile.name.split('.').pop().toLowerCase();
+                let data;
+                
+                if (fileExtension === '.json') {
+                    data = await this.readJSONFile(this.selectedFile);
+                } else if (fileExtension === '.xlsx' || fileExtension === '.xls') {
+                    data = await this.readExcelFile(this.selectedFile);
+                } else {
+                    throw new Error('不支持的文件格式');
+                }
                 
                 // 验证数据格式
                 const validationResult = this.validateImportData(data);
@@ -217,6 +227,77 @@ const DataManagerApp = {
                 };
                 reader.onerror = () => reject(new Error('文件读取失败'));
                 reader.readAsText(file);
+            });
+        },
+        
+        // 读取 Excel 文件
+        async readExcelFile(file) {
+            // 确保 SheetJS 库已加载
+            if (!window.XLSX) {
+                await this.loadSheetJS();
+            }
+            
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = window.XLSX.read(data, { type: 'array' });
+                        
+                        // 解析工作表数据
+                        const result = {
+                            websites: [],
+                            categories: []
+                        };
+                        
+                        // 查找网站数据工作表
+                        const websiteSheetName = workbook.SheetNames.find(name => 
+                            name.includes('网站') || name.toLowerCase().includes('website')
+                        ) || workbook.SheetNames[0];
+                        
+                        if (websiteSheetName && workbook.Sheets[websiteSheetName]) {
+                            const websiteSheet = workbook.Sheets[websiteSheetName];
+                            const websiteData = window.XLSX.utils.sheet_to_json(websiteSheet);
+                            
+                            result.websites = websiteData.map(row => ({
+                                id: row['ID'] || row['网站ID'] || this.generateId(),
+                                name: row['网站名称'] || row['名称'] || row['name'] || row['title'],
+                                url: row['网站URL'] || row['URL'] || row['url'],
+                                categoryId: row['分类ID'] || row['categoryId'] || null,
+                                icon: row['图标'] || row['icon'] || '',
+                                description: row['描述'] || row['description'] || '',
+                                paymentType: row['付费类型'] || row['paymentType'] || 'free',
+                                order: parseInt(row['排序'] || row['order']) || 0
+                            })).filter(website => website.name && website.url);
+                        }
+                        
+                        // 查找分类数据工作表
+                        const categorySheetName = workbook.SheetNames.find(name => 
+                            name.includes('分类') || name.toLowerCase().includes('category')
+                        );
+                        
+                        if (categorySheetName && workbook.Sheets[categorySheetName]) {
+                            const categorySheet = workbook.Sheets[categorySheetName];
+                            const categoryData = window.XLSX.utils.sheet_to_json(categorySheet);
+                            
+                            result.categories = categoryData.map(row => ({
+                                id: row['分类ID'] || row['ID'] || row['id'] || this.generateId(),
+                                name: row['分类名称'] || row['名称'] || row['name'],
+                                parentId: row['父级ID'] || row['parentId'] || null,
+                                icon: row['图标'] || row['icon'] || '',
+                                color: row['颜色'] || row['color'] || '#3498db',
+                                description: row['描述'] || row['description'] || '',
+                                order: parseInt(row['排序'] || row['order']) || 0
+                            })).filter(category => category.name);
+                        }
+                        
+                        resolve(result);
+                    } catch (error) {
+                        reject(new Error('Excel 文件解析失败: ' + error.message));
+                    }
+                };
+                reader.onerror = () => reject(new Error('文件读取失败'));
+                reader.readAsArrayBuffer(file);
             });
         },
         
@@ -655,8 +736,17 @@ const DataManagerApp = {
             this.showStatus('正在导入数据...', 'info');
             
             try {
-                // 读取文件数据
-                const data = await this.readJSONFile(this.selectedFile);
+                // 根据文件类型选择读取方法
+                const fileExtension = '.' + this.selectedFile.name.split('.').pop().toLowerCase();
+                let data;
+                
+                if (fileExtension === '.json') {
+                    data = await this.readJSONFile(this.selectedFile);
+                } else if (fileExtension === '.xlsx' || fileExtension === '.xls') {
+                    data = await this.readExcelFile(this.selectedFile);
+                } else {
+                    throw new Error('不支持的文件格式');
+                }
                 
                 // 验证数据格式
                 const validation = this.validateImportData(data);
