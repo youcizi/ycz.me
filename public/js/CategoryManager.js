@@ -515,7 +515,10 @@ class CategoryManager {
             }
             
             CustomModal.showSuccess('分类删除成功');
-            
+            // 刷新页面以确保数据同步
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
             // 发射分类删除事件，传递删除的分类信息
             this.eventBus.emit('categoryDeleted', category);
             
@@ -526,8 +529,7 @@ class CategoryManager {
                 await updateCategorySelector();
             }
             
-            // 刷新页面以确保数据同步
-            window.location.reload();
+            
             
         } catch (error) {
             // 删除分类失败
