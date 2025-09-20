@@ -13,7 +13,7 @@ class DataSyncService {
                 {
                     id: 'default-category',
                     name: '默认分类',
-                    icon: 'folder',
+                    icon: '📁',
                     color: '#3b82f6',
                     description: '系统默认分类',
                     order: 0,
@@ -23,7 +23,7 @@ class DataSyncService {
                 {
                     id: 'tools-category',
                     name: '工具网站',
-                    icon: 'wrench',
+                    icon: '📁',
                     color: '#10b981',
                     description: '常用工具网站',
                     order: 1,

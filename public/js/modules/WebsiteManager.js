@@ -288,15 +288,15 @@ class WebsiteManager {
             }
             
             // 检查URL是否已存在（排除自己）
-            if (updateData.url) {
-                const duplicateWebsite = this.websites.find(site => 
-                    site.id !== websiteId && 
-                    site.url && site.url.toLowerCase() === updateData.url.toLowerCase()
-                );
-                if (duplicateWebsite) {
-                    throw new Error(`网站URL "${updateData.url}" 已存在`);
-                }
-            }
+            // if (updateData.url) {
+            //     const duplicateWebsite = this.websites.find(site => 
+            //         site.id !== websiteId && 
+            //         site.url && site.url.toLowerCase() === updateData.url.toLowerCase()
+            //     );
+            //     if (duplicateWebsite) {
+            //         throw new Error(`网站URL "${updateData.url}" 已存在`);
+            //     }
+            // }
             
             console.log(`更新网站: ${existingWebsite.name}`);
             

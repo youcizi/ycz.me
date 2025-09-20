@@ -207,7 +207,7 @@ class IndexedDBService {
             const categoryData = {
                 id: category.id,
                 name: category.name.trim(),
-                icon: category.icon || 'folder',
+                icon: category.icon || '📁',
                 color: category.color || '#3b82f6',
                 description: category.description || '',
                 order: category.order || 0,
@@ -407,15 +407,7 @@ class IndexedDBService {
                 throw new Error('指定的分类不存在');
             }
 
-            // 检查URL是否重复
-            const existingWebsites = await this.getWebsites();
-            const urlExists = existingWebsites.some(site => 
-                site.url.toLowerCase() === website.url.trim().toLowerCase() && site.id !== website.id
-            );
-            
-            if (urlExists) {
-                throw new Error('网站URL已存在');
-            }
+            // URL重复检查已移除，允许添加重复URL的网站
 
             // 生成ID
             if (!website.id) {
@@ -483,15 +475,7 @@ class IndexedDBService {
                 }
             }
 
-            // 检查URL是否重复
-            const existingWebsites = await this.getWebsites();
-            const urlExists = existingWebsites.some(site => 
-                site.url.toLowerCase() === website.url.trim().toLowerCase() && site.id !== website.id
-            );
-            
-            if (urlExists) {
-                throw new Error('网站URL已存在');
-            }
+            // URL重复检查已移除，允许更新为重复URL的网站
 
             // 获取现有网站数据
             const existingWebsite = await this.getWebsiteById(website.id);
