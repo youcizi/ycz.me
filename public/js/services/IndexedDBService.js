@@ -5,7 +5,7 @@
 class IndexedDBService {
     constructor() {
         this.dbName = 'NavigationDB';
-        this.dbVersion = 2;
+        this.dbVersion = 3;
         this.db = null;
         this.isInitialized = false;
     }
@@ -68,6 +68,16 @@ class IndexedDBService {
                             websiteStore.createIndex('categoryId', 'categoryId', { unique: false });
                             websiteStore.createIndex('name', 'name', { unique: false });
                             websiteStore.createIndex('url', 'url', { unique: false });
+                        }
+
+                        // 版本3：新增搜索引擎表
+                        if (!db.objectStoreNames.contains('searchEngines')) {
+                            const engineStore = db.createObjectStore('searchEngines', {
+                                keyPath: 'id',
+                                autoIncrement: false
+                            });
+                            engineStore.createIndex('name', 'name', { unique: true });
+                            engineStore.createIndex('order', 'order', { unique: false });
                         }
 
                         console.log('数据库结构创建完成');
@@ -151,6 +161,143 @@ class IndexedDBService {
             return [];
         }
     }
+
+    // ==================== 搜索引擎操作 ====================
+
+    /**
+     * 获取所有搜索引擎
+     */
+    async getSearchEngines() {
+        try {
+            const engines = await this.executeTransaction('searchEngines', 'readonly', (store) => {
+                return store.getAll();
+            });
+            return engines || [];
+        } catch (error) {
+            console.error('获取搜索引擎失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 根据ID获取搜索引擎
+     */
+    async getSearchEngineById(id) {
+        try {
+            return await this.executeTransaction('searchEngines', 'readonly', (store) => {
+                return store.get(id);
+            });
+        } catch (error) {
+            console.error('获取搜索引擎失败:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 添加搜索引擎
+     */
+    async addSearchEngine(engine) {
+        try {
+            if (!engine || !engine.name || !engine.template) {
+                throw new Error('搜索引擎名称与模板URL不能为空');
+            }
+
+            // 检查名称是否重复
+            const existingEngines = await this.getSearchEngines();
+            const nameExists = existingEngines.some(e => 
+                e.name.toLowerCase() === engine.name.trim().toLowerCase() && e.id !== engine.id
+            );
+            if (nameExists) {
+                throw new Error('搜索引擎名称已存在');
+            }
+
+            // 生成ID
+            if (!engine.id) {
+                engine.id = this.generateId();
+            }
+
+            const engineData = {
+                id: engine.id,
+                name: engine.name.trim(),
+                template: engine.template.trim(), // 例如: https://www.google.com/search?q={q}
+                icon: engine.icon || '🔍',
+                order: engine.order || 0,
+                createdAt: engine.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await this.executeTransaction('searchEngines', 'readwrite', (store) => {
+                return store.add(engineData);
+            });
+
+            return engineData;
+        } catch (error) {
+            console.error('添加搜索引擎失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 更新搜索引擎
+     */
+    async updateSearchEngine(engine) {
+        try {
+            if (!engine || !engine.id) {
+                throw new Error('搜索引擎ID不能为空');
+            }
+            if (!engine.name || !engine.name.trim() || !engine.template || !engine.template.trim()) {
+                throw new Error('搜索引擎名称与模板URL不能为空');
+            }
+
+            // 检查名称是否重复
+            const existingEngines = await this.getSearchEngines();
+            const nameExists = existingEngines.some(e => 
+                e.name.toLowerCase() === engine.name.trim().toLowerCase() && e.id !== engine.id
+            );
+            if (nameExists) {
+                throw new Error('搜索引擎名称已存在');
+            }
+
+            const engineData = {
+                id: engine.id,
+                name: engine.name.trim(),
+                template: engine.template.trim(),
+                icon: engine.icon || '🔍',
+                order: engine.order || 0,
+                createdAt: engine.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await this.executeTransaction('searchEngines', 'readwrite', (store) => {
+                return store.put(engineData);
+            });
+
+            return engineData;
+        } catch (error) {
+            console.error('更新搜索引擎失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 删除搜索引擎
+     */
+    async deleteSearchEngine(id) {
+        try {
+            if (!id) {
+                throw new Error('搜索引擎ID不能为空');
+            }
+            await this.executeTransaction('searchEngines', 'readwrite', (store) => {
+                return store.delete(id);
+            });
+            return true;
+        } catch (error) {
+            console.error('删除搜索引擎失败:', error);
+            throw error;
+        }
+    }
+
+    
 
     /**
      * 根据ID获取分类

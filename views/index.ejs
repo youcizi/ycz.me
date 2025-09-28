@@ -16,6 +16,7 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/search.css">
     <link rel="stylesheet" href="/css/category-manager.css">
     
     <!-- v-cloak 样式防止模板闪烁 -->
@@ -142,17 +143,68 @@
             <!-- 搜索栏 -->
             <header class="content-header">
                 <div class="search-container">
-                    <input 
-                        type="text" 
-                        id="searchBox" 
-                        class="search-box" 
-                        v-model="searchKeyword"
-                        placeholder="搜索网站名称或描述..." 
-                        autocomplete="off"
-                    >
-                    <button id="searchBtn" class="search-btn" type="button" aria-label="搜索">
-                        🔍
-                    </button>
+                    <!-- 搜索模式与引擎切换（置于搜索框上方） -->
+                    <div class="search-toggle">
+                        <button 
+                            class="search-toggle-btn" 
+                            :class="{ active: searchMode === 'site' }" 
+                            @click="switchSearchMode('site')"
+                            type="button"
+                        >
+                            📁 站内搜索
+                        </button>
+                        <button 
+                            v-for="engine in searchEngines" 
+                            :key="engine.id" 
+                            class="search-toggle-btn" 
+                            :class="{ active: searchMode === 'external' && selectedEngineId === engine.id }" 
+                            @click="switchSearchMode('external'); selectExternalEngine(engine.id)"
+                            type="button"
+                            :title="'切换到 ' + (engine.name || '')"
+                        >
+                            <span class="engine-icon">{{ engine.icon || '🔍' }}</span> {{ engine.name }}
+                        </button>
+                        <button 
+                            class="search-toggle-btn engine-manager-btn" 
+                            type="button"
+                            @click="openEngineManager"
+                            title="管理搜索引擎"
+                        >
+                            ⚙️ 管理引擎
+                        </button>
+                    </div>
+
+                    <!-- 站内搜索表单 -->
+                    <div v-if="searchMode === 'site'" class="search-form">
+                        <input 
+                            type="text" 
+                            id="siteSearchBox" 
+                            class="search-box" 
+                            v-model="siteSearchKeyword"
+                            placeholder="站内搜索网站名称、描述或URL..." 
+                            autocomplete="off"
+                            @keyup.enter="performSearch"
+                        >
+                        <button class="search-btn" type="button" aria-label="站内搜索" @click="performSearch">
+                            🔍
+                        </button>
+                    </div>
+
+                    <!-- 外部搜索表单 -->
+                    <div v-else class="search-form">
+                        <input 
+                            type="text" 
+                            id="externalSearchBox" 
+                            class="search-box" 
+                            v-model="externalSearchKeyword"
+                            placeholder="外部搜索关键词..." 
+                            autocomplete="off"
+                            @keyup.enter="performSearch"
+                        >
+                        <button class="search-btn" type="button" aria-label="外部搜索" @click="performSearch">
+                            🌐 搜索
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -307,6 +359,63 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" @click="closeCategoryModal">取消</button>
                 <button class="btn btn-primary" @click="saveCategory">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索引擎管理模态框 -->
+    <div class="modal-overlay" v-show="engineModal.show" @click="closeEngineManager">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3>搜索引擎管理</h3>
+                <button class="close-btn" @click="closeEngineManager">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- 引擎列表 -->
+                <div class="engine-list">
+                    <div 
+                        class="engine-item" 
+                        v-for="engine in searchEngines" 
+                        :key="engine.id"
+                    >
+                        <div class="engine-info">
+                            <span class="engine-icon">{{ engine.icon || '🔍' }}</span>
+                            <span class="engine-name">{{ engine.name }}</span>
+                            <small class="engine-template">{{ engine.template }}</small>
+                        </div>
+                        <div class="engine-actions">
+                            <button class="btn btn-secondary" @click="startEditEngine(engine)" type="button">编辑</button>
+                            <button class="btn btn-danger" @click="deleteEngine(engine.id)" type="button">删除</button>
+                            <button class="btn btn-light" @click="moveEngineUp(engine.id)" type="button">上移</button>
+                            <button class="btn btn-light" @click="moveEngineDown(engine.id)" type="button">下移</button>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- 引擎表单（添加/编辑） -->
+                <div class="form-group">
+                    <label>引擎名称</label>
+                    <input type="text" v-model="engineForm.name" placeholder="如：Google、百度">
+                </div>
+                <div class="form-group">
+                    <label>搜索模板</label>
+                    <input type="text" v-model="engineForm.template" placeholder="如：https://www.google.com/search?q={q}"> 
+                    <small>使用 {q} 作为关键词占位符</small>
+                </div>
+                <div class="form-group">
+                    <label>图标</label>
+                    <input type="text" v-model="engineForm.icon" placeholder="输入emoji，例如 🔎">
+                </div>
+                <div class="form-group">
+                    <label>排序</label>
+                    <input type="number" v-model="engineForm.order" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="startAddEngine" type="button">新增</button>
+                <button class="btn btn-primary" @click="saveEngine" type="button">保存</button>
             </div>
         </div>
     </div>

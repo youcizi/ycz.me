@@ -1,0 +1,72 @@
+/* 搜索区域样式优化（独立样式） */
+.search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.search-toggle-btn {
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.search-toggle-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.engine-manager-btn {
+  margin-left: auto;
+}
+
+.search-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-box {
+  flex: 1;
+}
+
+.engine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.engine-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.engine-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.engine-name {
+  font-weight: 600;
+}
+
+.engine-template {
+  color: #6b7280;
+}
