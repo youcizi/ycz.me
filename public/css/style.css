@@ -400,7 +400,6 @@ body {
 .search-box:focus {
   border-color: #4f46e5;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-  transform: translateY(-1px);
 }
 
 .search-box::placeholder {
@@ -409,9 +408,8 @@ body {
 
 .search-btn {
   position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 1px;
+  top: 1px;
   background: #4f46e5;
   border: none;
   border-radius: 50%;
@@ -424,12 +422,6 @@ body {
   justify-content: center;
   transition: all 0.3s ease;
   font-size: 16px;
-}
-
-.search-btn:hover {
-  background: linear-gradient(135deg, #4338ca, #6d28d9);
-  transform: translateY(-50%) scale(1.05);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
 }
 
 /* 筛选栏样式 */
@@ -1044,7 +1036,7 @@ footer p + p {
   .search-btn {
     width: 40px;
     height: 40px;
-    right: 6px;
+    right: 0;
   }
   
   .add-website-btn {
@@ -1123,7 +1115,7 @@ footer p + p {
   background: #ffffff;
   border-radius: 12px;
   width: 90%;
-  max-width: 720px;
+  max-width: 520px;
   max-height: 80vh;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
@@ -2123,7 +2115,7 @@ footer p + p {
   background: var(--card-bg, #ffffff);
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  max-width: 720px;
+  max-width: 520px;
   width: 90%;
   max-height: 80vh;
   overflow: hidden;
