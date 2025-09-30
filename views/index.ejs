@@ -151,7 +151,7 @@
                             @click="switchSearchMode('site')"
                             type="button"
                         >
-                            📁 站内搜索
+                            站内
                         </button>
                         <button 
                             v-for="engine in searchEngines" 
@@ -212,6 +212,7 @@
             <div class="filter-bar">
                 <div class="filter-container">
                     <span class="filter-label">筛选：</span>
+					
                     <div class="filter-buttons">
                         <button class="filter-btn" :class="{ active: currentFilter === 'all' }" @click="setFilter('all')" type="button">全部</button>
                         <button class="filter-btn" :class="{ active: currentFilter === 'free' }" @click="setFilter('free')" type="button">免费</button>
@@ -532,11 +533,31 @@
     <script src="/js/CustomModal.js"></script>
     <script src="/js/EmojiIconPicker.js"></script>
     
+    <!-- 服务模块 -->
     <script type="module" src="/js/services/IndexedDBService.js"></script>
     <script type="module" src="/js/services/DataSyncService.js"></script>
-    <script type="module" src="/js/CategoryManager.js"></script>
+    
+    <!-- 管理器模块 -->
+    <script type="module" src="/js/modules/CategoryManager.js"></script>
     <script type="module" src="/js/modules/WebsiteManager.js"></script>
     <script type="module" src="/js/modules/UIManager.js"></script>
+    
+    <!-- 状态管理模块 -->
+    <script type="module" src="/js/stores/appStore.js"></script>
+    <script type="module" src="/js/stores/iconStore.js"></script>
+    
+    <!-- 组合式函数模块 -->
+    <script type="module" src="/js/composables/useCategories.js"></script>
+    <script type="module" src="/js/composables/useWebsites.js"></script>
+    <script type="module" src="/js/composables/useSearch.js"></script>
+    <script type="module" src="/js/composables/useIcons.js"></script>
+    
+    <!-- 工具函数模块 -->
+    <script type="module" src="/js/utils/paymentUtils.js"></script>
+    <script type="module" src="/js/utils/urlUtils.js"></script>
+    <script type="module" src="/js/utils/validationUtils.js"></script>
+    
+    <!-- 主应用模块 -->
     <script type="module" src="/js/vue-app.js"></script>
     
     <!-- 结构化数据 -->
