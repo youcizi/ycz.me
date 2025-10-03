@@ -5,7 +5,7 @@
 class IndexedDBService {
     constructor() {
         this.dbName = 'NavigationDB';
-        this.dbVersion = 3;
+        this.dbVersion = 4;
         this.db = null;
         this.isInitialized = false;
     }
@@ -78,6 +78,17 @@ class IndexedDBService {
                             });
                             engineStore.createIndex('name', 'name', { unique: true });
                             engineStore.createIndex('order', 'order', { unique: false });
+                        }
+
+                        // 版本4：新增筛选标签表（filters）
+                        if (!db.objectStoreNames.contains('filters')) {
+                            const filterStore = db.createObjectStore('filters', {
+                                keyPath: 'id',
+                                autoIncrement: false
+                            });
+                            filterStore.createIndex('key', 'key', { unique: true });
+                            filterStore.createIndex('name', 'name', { unique: false });
+                            filterStore.createIndex('order', 'order', { unique: false });
                         }
 
                         console.log('数据库结构创建完成');
@@ -176,6 +187,143 @@ class IndexedDBService {
         } catch (error) {
             console.error('获取搜索引擎失败:', error);
             return [];
+        }
+    }
+
+    // ==================== 筛选标签（filters）操作 ====================
+
+    /**
+     * 获取所有筛选标签
+     */
+    async getFilters() {
+        try {
+            const filters = await this.executeTransaction('filters', 'readonly', (store) => {
+                return store.getAll();
+            });
+            return (filters || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        } catch (error) {
+            console.error('获取筛选标签失败:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 根据key获取筛选标签
+     */
+    async getFilterByKey(key) {
+        try {
+            const filters = await this.getFilters();
+            return filters.find(f => f.key === key) || null;
+        } catch (error) {
+            console.error('根据key获取筛选标签失败:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 添加筛选标签
+     */
+    async addFilter(filter) {
+        try {
+            if (!filter || !filter.name || !filter.name.trim() || !filter.key || !filter.key.trim()) {
+                throw new Error('筛选标签名称与key不能为空');
+            }
+
+            // 检查key是否重复
+            const existing = await this.getFilters();
+            const keyExists = existing.some(f => f.key.toLowerCase() === filter.key.trim().toLowerCase());
+            if (keyExists) {
+                throw new Error('筛选标签 key 已存在');
+            }
+
+            // 生成ID
+            if (!filter.id) {
+                filter.id = this.generateId();
+            }
+
+            const filterData = {
+                id: filter.id,
+                name: filter.name.trim(),
+                key: filter.key.trim(),
+                backgroundColor: filter.backgroundColor || '#3b82f6',
+                order: filter.order || 0,
+                createdAt: filter.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await this.executeTransaction('filters', 'readwrite', (store) => {
+                return store.add(filterData);
+            });
+
+            return filterData;
+        } catch (error) {
+            console.error('添加筛选标签失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 更新筛选标签
+     */
+    async updateFilter(filter) {
+        try {
+            if (!filter || !filter.id) {
+                throw new Error('筛选标签ID不能为空');
+            }
+
+            if (!filter.name || !filter.name.trim() || !filter.key || !filter.key.trim()) {
+                throw new Error('筛选标签名称与key不能为空');
+            }
+
+            // 获取现有数据
+            const existing = await this.executeTransaction('filters', 'readonly', (store) => store.get(filter.id));
+            if (!existing) {
+                throw new Error('筛选标签不存在');
+            }
+
+            // 检查key是否与其他标签重复
+            const all = await this.getFilters();
+            const keyExists = all.some(f => f.key.toLowerCase() === filter.key.trim().toLowerCase() && f.id !== filter.id);
+            if (keyExists) {
+                throw new Error('筛选标签 key 已存在');
+            }
+
+            const updatedFilter = {
+                ...existing,
+                ...filter,
+                name: filter.name.trim(),
+                key: filter.key.trim(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await this.executeTransaction('filters', 'readwrite', (store) => {
+                return store.put(updatedFilter);
+            });
+
+            return updatedFilter;
+        } catch (error) {
+            console.error('更新筛选标签失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 删除筛选标签
+     */
+    async deleteFilter(id) {
+        try {
+            if (!id) {
+                throw new Error('筛选标签ID不能为空');
+            }
+
+            await this.executeTransaction('filters', 'readwrite', (store) => {
+                return store.delete(id);
+            });
+
+            return true;
+        } catch (error) {
+            console.error('删除筛选标签失败:', error);
+            throw error;
         }
     }
 
@@ -768,7 +916,7 @@ class IndexedDBService {
      */
     async clearAllData() {
         try {
-            const stores = ['categories', 'websites'];
+            const stores = ['categories', 'websites', 'filters'];
             
             for (const storeName of stores) {
                 await this.executeTransaction(storeName, 'readwrite', (store) => {
@@ -789,14 +937,16 @@ class IndexedDBService {
      */
     async getStats() {
         try {
-            const [categories, websites] = await Promise.all([
+            const [categories, websites, filters] = await Promise.all([
                 this.getCategories(),
-                this.getWebsites()
+                this.getWebsites(),
+                this.getFilters()
             ]);
 
             return {
                 categoriesCount: categories.length,
                 websitesCount: websites.length,
+                filtersCount: filters.length,
                 lastUpdated: new Date().toISOString()
             };
         } catch (error) {

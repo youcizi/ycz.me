@@ -26,13 +26,15 @@ import {
     // 模态框状态
     modals, engineModal,
     // 编辑状态
-    editingCategory, editingWebsite, editingEngine,
+    editingCategory, editingWebsite, editingEngine, editingFilter,
     // 表单数据
-    categoryForm, websiteForm, engineForm,
+    categoryForm, websiteForm, engineForm, filterForm,
     // 图标选择器状态
     iconSelector,
     // 计算属性
-    hasCategories, hasWebsites, currentCategoryName, availableParentCategories, topLevelCategories
+    hasCategories, hasWebsites, currentCategoryName, availableParentCategories, topLevelCategories,
+    // 筛选标签
+    filterTags
 } from './stores/appStore.js';
 
 import { currentIcons, iconCategories } from './stores/iconStore.js';
@@ -63,7 +65,13 @@ import {
 } from './composables/useIcons.js';
 
 // 工具函数导入
-import { getPaymentTypeLabel, getPaymentTypeColor, getPaymentTypeClass } from './utils/paymentUtils.js';
+// 动态筛选标签工具函数
+import { 
+    loadFilters, openFilterManager, closeFilterManager,
+    startAddFilter, startEditFilter, saveFilter, deleteFilter,
+    moveFilterUp, moveFilterDown,
+    getFilterName, getFilterColor
+} from './composables/useFilters.js';
 import { openWebsite as openWebsiteUtil } from './utils/urlUtils.js';
 
 // 创建Vue应用
@@ -101,7 +109,8 @@ const app = createApp({
                 await Promise.all([
                     loadCategories(),
                     loadWebsites(),
-                    loadSearchEngines()
+                    loadSearchEngines(),
+                    loadFilters()
                 ]);
                 await ensureDefaultSearchEngines();
             } catch (error) {
@@ -211,6 +220,7 @@ const app = createApp({
             categories,
             websites,
             filteredWebsites,
+            filterTags,
             currentCategory,
             siteSearchKeyword,
             externalSearchKeyword,
@@ -229,11 +239,13 @@ const app = createApp({
             editingCategory,
             editingWebsite,
             editingEngine,
+            editingFilter,
             
             // 表单数据
             categoryForm,
             websiteForm,
             engineForm,
+            filterForm,
             
             // 图标选择器状态
             iconSelector,
@@ -293,16 +305,25 @@ const app = createApp({
             selectIconCategory,
             confirmIconSelection,
             
-            // 工具方法
-            getPaymentTypeLabel,
-            getPaymentTypeColor,
-            getPaymentTypeClass,
+            // 筛选标签管理方法
+            openFilterManager,
+            closeFilterManager,
+            startAddFilter,
+            startEditFilter,
+            saveFilter,
+            deleteFilter,
+            moveFilterUp,
+            moveFilterDown,
+            // 徽标展示工具
+            getFilterName,
+            getFilterColor,
             toggleSidebar,
             
             // 数据加载方法
             loadCategories,
             loadWebsites,
-            loadData
+            loadData,
+            loadFilters
         };
     }
 });

@@ -24,6 +24,9 @@ export const searchMode = ref('site'); // 'site' 或 'external'
 export const searchEngines = ref([]);
 export const selectedEngineId = ref('');
 
+// 筛选标签（filters）
+export const filterTags = ref([]);
+
 // UI状态
 export const expandedCategories = ref(new Set());
 export const sidebarCollapsed = ref(false);
@@ -34,7 +37,9 @@ export const modals = reactive({
     editCategory: false,
     addWebsite: false,
     editWebsite: false,
-    iconSelector: false
+    iconSelector: false,
+    filterManager: false,
+    editFilter: false
 });
 
 // 编辑状态
@@ -56,6 +61,16 @@ export const websiteForm = reactive({
     categoryId: '',
     paymentType: ''
 });
+
+// 筛选标签表单与编辑状态
+export const filterForm = reactive({
+    id: '',
+    name: '',
+    key: '',
+    backgroundColor: '#3b82f6',
+    order: 0
+});
+export const editingFilter = ref(null);
 
 // 搜索引擎管理状态
 export const engineModal = reactive({ show: false });

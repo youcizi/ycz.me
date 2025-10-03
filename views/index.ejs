@@ -215,10 +215,15 @@
 					
                     <div class="filter-buttons">
                         <button class="filter-btn" :class="{ active: currentFilter === 'all' }" @click="setFilter('all')" type="button">全部</button>
-                        <button class="filter-btn" :class="{ active: currentFilter === 'free' }" @click="setFilter('free')" type="button">免费</button>
-                        <button class="filter-btn" :class="{ active: currentFilter === 'paid' }" @click="setFilter('paid')" type="button">付费</button>
-                        <button class="filter-btn" :class="{ active: currentFilter === 'trial' }" @click="setFilter('trial')" type="button">试用</button>
-                        <button class="filter-btn" :class="{ active: currentFilter === 'points' }" @click="setFilter('points')" type="button">送积分</button>
+                        <button class="filter-btn"
+                                v-for="tag in filterTags" :key="tag.id"
+                                :style="{ backgroundColor: tag.backgroundColor }"
+                                :class="{ active: currentFilter === tag.key }"
+                                @click="setFilter(tag.key)"
+                                type="button">
+                            {{ tag.name }}
+                        </button>
+                        <button class="filter-btn manage-btn" @click="openFilterManager" type="button">管理</button>
                     </div>
                 </div>
             </div>
@@ -239,11 +244,11 @@
                         :data-website-id="website.id"
                         @click="openWebsite(website.url)"
                     >
-                        <!-- 付费类型标识 -->
+                        <!-- 筛选标签徽标 -->
                         <div v-if="website.paymentType" 
-                             class="payment-type-badge" 
-                             :class="getPaymentTypeClass(website.paymentType)">
-                            {{ getPaymentTypeLabel(website.paymentType) }}
+                             class="payment-type-badge"
+                             :style="{ backgroundColor: getFilterColor(website.paymentType) }">
+                            {{ getFilterName(website.paymentType) }}
                         </div>
                         
                         <div class="website-icon">{{ website.icon }}</div>
@@ -468,19 +473,55 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="websitePaymentType">付费类型</label>
+                    <label for="websitePaymentType">标签</label>
                     <select id="websitePaymentType" v-model="websiteForm.paymentType">
-                        <option value="">请选择付费类型</option>
-                        <option value="free">免费</option>
-                        <option value="paid">付费</option>
-                        <option value="trial">试用</option>
-                        <option value="points">送积分</option>
+                        <option value="">请选择标签</option>
+                        <option v-for="tag in filterTags" :key="tag.id" :value="tag.key">{{ tag.name }}</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @click="closeWebsiteModal">取消</button>
                 <button class="btn btn-primary" @click="saveWebsite">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选标签管理模态框（移动至 #app 容器内） -->
+    <div class="modal-overlay" v-show="modals.filterManager" @click="closeFilterManager">
+        <div class="modal-content" @click.stop>
+            <div class="modal-header">
+                <h3>管理筛选标签</h3>
+                <button class="close-btn" @click="closeFilterManager">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="filter-list">
+                    <div class="filter-item" v-for="tag in filterTags" :key="tag.id">
+                        <span class="filter-preview" :style="{ backgroundColor: tag.backgroundColor }">{{ tag.name }} ({{ tag.key }})</span>
+                        <div class="actions">
+                            <button class="btn btn-secondary" @click="startEditFilter(tag)" type="button">编辑</button>
+                            <button class="btn btn-danger" @click="deleteFilter(tag.id)" type="button">删除</button>
+                            <button class="btn btn-secondary" @click="moveFilterUp(tag.id)" type="button">上移</button>
+                            <button class="btn btn-secondary" @click="moveFilterDown(tag.id)" type="button">下移</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="filterName">名称</label>
+                    <input id="filterName" type="text" v-model="filterForm.name" placeholder="请输入标签名称">
+                </div>
+                <div class="form-group">
+                    <label for="filterKey">Key</label>
+                    <input id="filterKey" type="text" v-model="filterForm.key" placeholder="用于筛选的唯一键值">
+                </div>
+                <div class="form-group">
+                    <label for="filterColor">背景色</label>
+                    <input id="filterColor" type="color" v-model="filterForm.backgroundColor">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="startAddFilter" type="button">新增</button>
+                <button class="btn btn-primary" @click="saveFilter" type="button">保存</button>
             </div>
         </div>
     </div>
