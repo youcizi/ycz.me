@@ -279,11 +279,6 @@ class CategoryManager {
                 throw new Error(`未找到分类: ${categoryId}`);
             }
             
-            // 检查是否是最后一个分类
-            if (this.categories.length <= 1) {
-                throw new Error('不能删除最后一个分类，至少需要保留一个分类');
-            }
-            
             console.log(`删除分类: ${categoryToDelete.name}`);
             
             // 检查该分类下是否有网站

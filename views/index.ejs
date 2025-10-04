@@ -244,8 +244,8 @@
                         :data-website-id="website.id"
                         @click="openWebsite(website.url)"
                     >
-                        <!-- 筛选标签徽标 -->
-                        <div v-if="!!website.paymentType" 
+                        <!-- 筛选标签徽标：仅在存在匹配的标签名称时显示 -->
+                        <div v-if="website.paymentType && getFilterName(website.paymentType)" 
                              class="payment-type-badge"
                              :style="{ backgroundColor: getFilterColor(website.paymentType) }">
                             {{ getFilterName(website.paymentType) }}
