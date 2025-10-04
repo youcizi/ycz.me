@@ -79,6 +79,14 @@ const ToolsApp = {
       if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear += 1; }
       else { this.viewMonth += 1; }
     },
+    gotoToday() {
+      const now = new Date();
+      this.selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      this.viewYear = this.selectedDate.getFullYear();
+      this.viewMonth = this.selectedDate.getMonth();
+      this.weatherVisible = false;
+      this.calendarVisible = true;
+    },
     selectDate(d) {
       this.selectedDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       this.viewYear = this.selectedDate.getFullYear();

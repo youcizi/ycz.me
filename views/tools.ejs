@@ -26,7 +26,11 @@
                         <span class="weather-icon" title="天气" @mouseenter="showWeather" @mouseleave="hideWeather">🌤️</span>
                         <span class="nav-link date-text" @mouseenter="showCalendar" @click="toggleCalendar">当前日期：{{ currentDateDisplay }}</span>
                         <div v-if="calendarVisible" class="date-dropdown" @mouseleave.stop="hideCalendar">
-                            <div class="calendar-header">
+                            <div class="calendar-footer">
+                                <button class="cal-btn" @click.stop="gotoToday">今天</button>
+                            </div>
+							
+							<div class="calendar-header">
                                 <button class="cal-btn" @click.stop="prevMonth">‹</button>
                                 <span class="cal-title">{{ viewYear }}年{{ viewMonth + 1 }}月</span>
                                 <button class="cal-btn" @click.stop="nextMonth">›</button>
@@ -38,6 +42,7 @@
                                     <div class="day-lunar">{{ d.lunar }}</div>
                                 </div>
                             </div>
+                            
                         </div>
                         <div v-if="weatherVisible" class="weather-dropdown" @mouseenter="showWeather" @mouseleave="hideWeather">
                             <div class="weather-title">{{ locationName }}</div>

@@ -129,7 +129,6 @@
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-  padding: 12px;
   z-index: 30;
 }
 .calendar-header {
@@ -137,6 +136,16 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.calendar-footer {
+	padding-bottom: 12px;
+	padding-top: 12px;
+	background-color: #f8f8f8;
+	border-bottom: 1px solid #e5e7eb;
+	text-align: center;
+	margin-bottom: 12px;
 }
 .cal-btn {
   background: #f3f4f6;
@@ -146,8 +155,10 @@
   border-radius: 6px;
   padding: 2px 8px;
 }
+
 .cal-title { font-weight: 600; color: #1f2937; }
 .calendar-grid {
+   padding: 12px;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
