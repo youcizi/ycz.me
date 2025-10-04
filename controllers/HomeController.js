@@ -43,6 +43,27 @@ class HomeController {
       ctx.body = { success: false, message: '服务器内部错误' };
     }
   }
+
+  /**
+   * 渲染在线工具页面
+   * @param {Object} ctx Koa上下文对象
+   */
+  async tools(ctx) {
+    try {
+      const now = new Date();
+      const currentDateStr = now.toLocaleDateString('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'long'
+      });
+      await ctx.render('tools', {
+        title: '在线工具 - 网站导航',
+        currentDateStr
+      });
+    } catch (error) {
+      console.error('渲染在线工具页面失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
 }
 
 module.exports = HomeController;

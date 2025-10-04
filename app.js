@@ -27,7 +27,8 @@ app.on('error', (err, ctx) => {
   console.error('服务器错误:', err);
 });
 
-const requestedPort = parseInt(process.env.PORT, 10) || 0; // 0 表示让系统自动分配可用端口
+// 固定端口：优先读取环境变量PORT，否则使用58188（避免每次随机端口）
+const requestedPort = parseInt(process.env.PORT || '52866', 10);
 const server = app.listen(requestedPort, () => {
   const address = server.address();
   const actualPort = typeof address === 'string' ? address : address.port;

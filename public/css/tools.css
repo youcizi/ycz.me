@@ -1,0 +1,195 @@
+/* 在线工具页样式：与首页保持一致的配色与结构 */
+
+.tools-main {
+  background: #f8f8f8;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 280px 1fr; /* 左侧列表 + 右侧内容 */
+  gap: 20px;
+}
+
+.tools-sidebar {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.tools-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+.tools-list {
+  list-style: none;
+}
+
+.tools-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tools-item:hover {
+  background: #f3f4f6;
+}
+
+.tools-item.active {
+  background: #eff6ff;
+  border: 1px solid #c7d2fe;
+  color: #4f46e5;
+}
+
+.tool-icon {
+  width: 22px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.tool-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+.tools-content {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  min-height: 360px;
+}
+
+.content-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.content-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tool-panel {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.placeholder {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 作用域覆盖：工具页不使用首页左侧站点侧栏，移除主内容左侧留白 */
+.tools-page .main-content {
+  margin-left: 0;
+}
+
+/* 保证工具页顶栏贴边显示（与首页一致） */
+.tools-page .top-bar {
+  left: 0;
+}
+
+/* 顶部日期下拉触发与日历样式 */
+.date-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.weather-icon {
+  font-size: 18px;
+}
+.date-text {
+  user-select: none;
+}
+.date-dropdown {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 70vh;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  padding: 12px;
+  z-index: 30;
+}
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cal-btn {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 14px;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+.cal-title { font-weight: 600; color: #1f2937; }
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.cal-weekday { text-align: center; color: #6b7280; font-size: 12px; }
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  min-height: 42px;
+  cursor: pointer;
+}
+.cal-day.out-month { opacity: 0.45; }
+.cal-day.today { border-color: #93c5fd; }
+.cal-day.selected { background: #eff6ff; border-color: #93c5fd; }
+.day-num { font-size: 14px; color: #1f2937; }
+.day-lunar { font-size: 11px; color: #6b7280; }
+
+/* 天气详情下拉 */
+.weather-dropdown {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  width: 320px;
+  max-width: 90vw;
+  max-height: 70vh;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  padding: 12px;
+  z-index: 30;
+}
+.weather-title {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+.weather-row { color: #374151; font-size: 14px; line-height: 22px; }
+.weather-tip { color: #6b7280; font-size: 12px; margin-top: 6px; }

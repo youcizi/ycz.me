@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <meta name="description" content="在线工具列表页面">
+    <meta name="keywords" content="在线工具,工具列表,网站工具">
+
+    <!-- 复用站点基础样式，使风格与首页一致 -->
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- 工具页样式 -->
+    <link rel="stylesheet" href="/css/tools.css">
+</head>
+<body>
+  <div id="app" class="app-container tools-page" v-cloak>
+        <!-- 顶部导航栏（与首页一致的风格） -->
+        <main class="main-content">
+            <div class="top-bar">
+                <div class="top-nav-links">
+                    <a href="/" class="nav-link">返回首页</a>
+                    <span class="nav-link active">在线工具</span>
+                </div>
+                <div class="top-actions">
+                    <div id="dateTrigger" class="date-trigger">
+                        <span class="weather-icon" title="天气" @mouseenter="showWeather" @mouseleave="hideWeather">🌤️</span>
+                        <span class="nav-link date-text" @mouseenter="showCalendar" @click="toggleCalendar">当前日期：{{ currentDateDisplay }}</span>
+                        <div v-if="calendarVisible" class="date-dropdown" @mouseleave.stop="hideCalendar">
+                            <div class="calendar-header">
+                                <button class="cal-btn" @click.stop="prevMonth">‹</button>
+                                <span class="cal-title">{{ viewYear }}年{{ viewMonth + 1 }}月</span>
+                                <button class="cal-btn" @click.stop="nextMonth">›</button>
+                            </div>
+                            <div class="calendar-grid">
+                                <div class="cal-weekday" v-for="w in ['日','一','二','三','四','五','六']" :key="w">{{ w }}</div>
+                                <div class="cal-day" v-for="d in monthDays" :key="d.key" :class="{ 'out-month': !d.inMonth, 'today': d.isToday, 'selected': d.isSelected }" @click.stop="selectDate(d.date)">
+                                    <div class="day-num">{{ d.date.getDate() }}</div>
+                                    <div class="day-lunar">{{ d.lunar }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="weatherVisible" class="weather-dropdown" @mouseenter="showWeather" @mouseleave="hideWeather">
+                            <div class="weather-title">{{ locationName }}</div>
+                            <div class="weather-row">天气：暂未接入API</div>
+                            <div class="weather-row">温度：-- °C</div>
+                            <div class="weather-row">风力：--</div>
+                            <div class="weather-tip">可集成天气API显示实时数据</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 工具页主体：上下结构中的下半部分采用左右布局 -->
+            <section class="tools-main" aria-label="在线工具">
+                <!-- 左：工具列表 -->
+                <aside class="tools-sidebar">
+                    <div class="tools-title">工具列表</div>
+                    <ul class="tools-list">
+                        <li v-for="tool in tools" :key="tool.id"
+                            :class="['tools-item', { active: currentToolId === tool.id }]"
+                            @click="selectTool(tool.id)"
+                            :title="tool.name">
+                            <span class="tool-icon">{{ tool.icon }}</span>
+                            <span class="tool-name">{{ tool.name }}</span>
+                        </li>
+                    </ul>
+                </aside>
+
+                <!-- 右：具体工具内容 -->
+                <div class="tools-content">
+                    <div class="content-header-row">
+                        <h2 class="content-title">{{ currentToolName }}</h2>
+                    </div>
+
+                    <!-- 不同工具的占位内容（后续可扩展为具体功能） -->
+                    <div v-if="currentToolId === 'timestamp'" class="tool-panel">
+                        <p class="placeholder">时间戳转换占位：可在此实现秒/毫秒与日期互转。</p>
+                    </div>
+                    <div v-else-if="currentToolId === 'base64'" class="tool-panel">
+                        <p class="placeholder">Base64 编解码占位：在此输入文本进行编码/解码。</p>
+                    </div>
+                    <div v-else-if="currentToolId === 'url'" class="tool-panel">
+                        <p class="placeholder">URL 编解码占位：在此输入文本进行URL编码/解码。</p>
+                    </div>
+                    <div v-else class="tool-panel">
+                        <p class="placeholder">请选择左侧工具查看具体内容。</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Vue 3 -->
+    <script src="/js/vue.global.js"></script>
+    <!-- 农历工具 -->
+    <script src="/js/utils/lunar.js"></script>
+    <!-- 工具页应用脚本 -->
+    <script src="/js/tools-app.js"></script>
+</body>
+</html>
