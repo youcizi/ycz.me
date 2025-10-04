@@ -21,6 +21,8 @@ const DataManagerApp = {
             // 统计信息
             websiteCount: 0,
             categoryCount: 0,
+            filterCount: 0,
+            engineCount: 0,
             
             // IndexedDB 服务实例
             dbService: null,
@@ -53,9 +55,13 @@ const DataManagerApp = {
             try {
                 const websites = await this.dbService.getWebsites();
                 const categories = await this.dbService.getCategories();
+                const filters = await this.dbService.getFilters();
+                const searchEngines = await this.dbService.getSearchEngines();
                 
                 this.websiteCount = websites.length;
                 this.categoryCount = categories.length;
+                this.filterCount = Array.isArray(filters) ? filters.length : 0;
+                this.engineCount = Array.isArray(searchEngines) ? searchEngines.length : 0;
             } catch (error) {
                 console.error('加载统计信息失败:', error);
             }
@@ -161,6 +167,10 @@ const DataManagerApp = {
                 // 直接导入数据
                 let importedWebsites = 0;
                 let importedCategories = 0;
+                let importedFilters = 0;
+                let importedEngines = 0;
+                let skippedDuplicateFilters = 0;
+                let skippedDuplicateEngines = 0;
                 
                 // 导入分类数据
                 if (data.categories && data.categories.length > 0) {
@@ -189,11 +199,89 @@ const DataManagerApp = {
                         }
                     }
                 }
+
+                // 导入筛选标签（按 key 去重）
+                if (data.filters && data.filters.length > 0) {
+                    const seenKeys = new Set();
+                    for (const tag of data.filters) {
+                        const keyLower = (tag.key || '').trim().toLowerCase();
+                        if (!keyLower) continue;
+                        if (seenKeys.has(keyLower)) { skippedDuplicateFilters++; continue; }
+                        seenKeys.add(keyLower);
+
+                        const tagData = {
+                            id: tag.id || this.generateId(),
+                            name: tag.name,
+                            key: tag.key,
+                            backgroundColor: tag.backgroundColor || '#3b82f6',
+                            order: tag.order || 0
+                        };
+                        try {
+                            await this.dbService.addFilter(tagData);
+                            importedFilters++;
+                        } catch (error) {
+                            // 如果因重复 key 失败，尝试更新现有标签
+                            if (String(error.message || '').includes('key 已存在')) {
+                                try {
+                                    const existingFilters = await this.dbService.getFilters();
+                                    const exist = existingFilters.find(f => (f.key || '').toLowerCase() === keyLower);
+                                    if (exist) {
+                                        await this.dbService.updateFilter({ ...exist, ...tagData, id: exist.id });
+                                        importedFilters++;
+                                    }
+                                } catch (e2) {
+                                    console.warn(`更新筛选标签失败: ${tagData.name}`, e2);
+                                }
+                            } else {
+                                console.warn(`导入筛选标签失败: ${tagData.name}`, error);
+                            }
+                        }
+                    }
+                }
+
+                // 导入搜索引擎（按名称去重）
+                if (data.searchEngines && data.searchEngines.length > 0) {
+                    const seenNames = new Set();
+                    for (const engine of data.searchEngines) {
+                        const nameLower = (engine.name || '').trim().toLowerCase();
+                        const template = (engine.template || '').trim();
+                        if (!nameLower || !template) continue;
+                        if (seenNames.has(nameLower)) { skippedDuplicateEngines++; continue; }
+                        seenNames.add(nameLower);
+
+                        const engineData = {
+                            id: engine.id || this.generateId(),
+                            name: engine.name,
+                            template: template,
+                            order: engine.order || 0
+                        };
+                        try {
+                            await this.dbService.addSearchEngine(engineData);
+                            importedEngines++;
+                        } catch (error) {
+                            // 如果因为名称重复失败，尝试更新现有的同名引擎
+                            if (String(error.message || '').includes('名称已存在')) {
+                                try {
+                                    const existingEngines = await this.dbService.getSearchEngines();
+                                    const exist = existingEngines.find(e => (e.name || '').toLowerCase() === nameLower);
+                                    if (exist) {
+                                        await this.dbService.updateSearchEngine({ ...exist, ...engineData, id: exist.id });
+                                        importedEngines++;
+                                    }
+                                } catch (e2) {
+                                    console.warn(`更新搜索引擎失败: ${engineData.name}`, e2);
+                                }
+                            } else {
+                                console.warn(`导入搜索引擎失败: ${engineData.name}`, error);
+                            }
+                        }
+                    }
+                }
                 
                 // 更新统计信息
                 await this.loadStats();
                 
-                this.showStatus(`导入成功！导入了 ${importedWebsites} 个网站，${importedCategories} 个分类。正在刷新页面...`, 'success');
+                this.showStatus(`导入成功！导入了 ${importedWebsites} 个网站，${importedCategories} 个分类，${importedFilters} 个筛选标签（去重跳过 ${skippedDuplicateFilters}），${importedEngines} 个搜索引擎（去重跳过 ${skippedDuplicateEngines}）。正在刷新页面...`, 'success');
                 this.clearFile();
                 
                 // 重置警告状态
@@ -247,7 +335,9 @@ const DataManagerApp = {
                         // 解析工作表数据
                         const result = {
                             websites: [],
-                            categories: []
+                            categories: [],
+                            filters: [],
+                            searchEngines: []
                         };
                         
                         // 查找网站数据工作表
@@ -290,6 +380,41 @@ const DataManagerApp = {
                                 order: parseInt(row['排序'] || row['order']) || 0
                             })).filter(category => category.name);
                         }
+
+                        // 查找筛选标签工作表
+                        const filterSheetName = workbook.SheetNames.find(name =>
+                            name.includes('筛选') || name.includes('标签') || name.toLowerCase().includes('filter')
+                        );
+
+                        if (filterSheetName && workbook.Sheets[filterSheetName]) {
+                            const filterSheet = workbook.Sheets[filterSheetName];
+                            const filterData = window.XLSX.utils.sheet_to_json(filterSheet);
+
+                            result.filters = filterData.map(row => ({
+                                id: row['ID'] || row['id'] || this.generateId(),
+                                name: row['名称'] || row['name'],
+                                key: row['Key'] || row['key'],
+                                backgroundColor: row['背景色'] || row['backgroundColor'] || '#3b82f6',
+                                order: parseInt(row['排序'] || row['order']) || 0
+                            })).filter(tag => tag.name && tag.key);
+                        }
+
+                        // 查找搜索引擎工作表
+                        const engineSheetName = workbook.SheetNames.find(name =>
+                            name.includes('引擎') || name.toLowerCase().includes('engine')
+                        );
+
+                        if (engineSheetName && workbook.Sheets[engineSheetName]) {
+                            const engineSheet = workbook.Sheets[engineSheetName];
+                            const engineData = window.XLSX.utils.sheet_to_json(engineSheet);
+
+                            result.searchEngines = engineData.map(row => ({
+                                id: row['ID'] || row['id'] || this.generateId(),
+                                name: row['引擎名称'] || row['名称'] || row['name'],
+                                template: row['搜索模板'] || row['模板'] || row['template'],
+                                order: parseInt(row['排序'] || row['order']) || 0
+                            })).filter(engine => engine.name && engine.template);
+                        }
                         
                         resolve(result);
                     } catch (error) {
@@ -310,8 +435,8 @@ const DataManagerApp = {
             }
             
             // 检查必要的字段
-            if (!data.websites && !data.categories) {
-                return { valid: false, message: '数据中必须包含 websites 或 categories 字段' };
+            if (!data.websites && !data.categories && !data.filters && !data.searchEngines) {
+                return { valid: false, message: '数据中至少包含 websites、categories、filters 或 searchEngines 之一' };
             }
             
             // 验证网站数据格式
@@ -349,10 +474,14 @@ const DataManagerApp = {
                 // 获取所有数据
                 const websites = await this.dbService.getWebsites();
                 const categories = await this.dbService.getCategories();
+                const filters = await this.dbService.getFilters();
+                const searchEngines = await this.dbService.getSearchEngines();
                 
                 const exportData = {
                     websites,
                     categories,
+                    filters,
+                    searchEngines,
                     exportTime: new Date().toISOString(),
                     version: '1.0'
                 };
@@ -376,10 +505,14 @@ const DataManagerApp = {
                 // 获取所有数据
                 const websites = await this.dbService.getWebsites();
                 const categories = await this.dbService.getCategories();
+                const filters = await this.dbService.getFilters();
+                const searchEngines = await this.dbService.getSearchEngines();
                 
                 const exportData = {
                     websites,
                     categories,
+                    filters,
+                    searchEngines,
                     exportTime: new Date().toISOString(),
                     version: '1.0'
                 };
@@ -432,6 +565,8 @@ const DataManagerApp = {
                 // 获取所有数据
                 const websites = await this.dbService.getWebsites();
                 const categories = await this.dbService.getCategories();
+                const filters = await this.dbService.getFilters();
+                const searchEngines = await this.dbService.getSearchEngines();
                 
                 // 动态加载 SheetJS
                 if (!window.XLSX) {
@@ -451,7 +586,8 @@ const DataManagerApp = {
                     '付费类型': website.paymentType || '',
                     '排序': website.order || 0,
                     '创建时间': website.createdAt,
-                    '更新时间': website.updatedAt
+                    '更新时间': website.updatedAt,
+                    'ID': website.id
                 }));
                 
                 const websiteWS = window.XLSX.utils.json_to_sheet(websiteData);
@@ -472,6 +608,31 @@ const DataManagerApp = {
                 
                 const categoryWS = window.XLSX.utils.json_to_sheet(categoryData);
                 window.XLSX.utils.book_append_sheet(wb, categoryWS, '分类数据');
+
+                // 创建筛选标签工作表
+                const filterData = (filters || []).map(tag => ({
+                    '名称': tag.name,
+                    'Key': tag.key,
+                    '背景色': tag.backgroundColor || '#3b82f6',
+                    '排序': tag.order || 0,
+                    '创建时间': tag.createdAt,
+                    '更新时间': tag.updatedAt,
+                    'ID': tag.id
+                }));
+                const filterWS = window.XLSX.utils.json_to_sheet(filterData);
+                window.XLSX.utils.book_append_sheet(wb, filterWS, '筛选标签');
+
+                // 创建搜索引擎工作表
+                const engineData = (searchEngines || []).map(engine => ({
+                    '引擎名称': engine.name,
+                    '搜索模板': engine.template,
+                    '排序': engine.order || 0,
+                    '创建时间': engine.createdAt,
+                    '更新时间': engine.updatedAt,
+                    'ID': engine.id
+                }));
+                const engineWS = window.XLSX.utils.json_to_sheet(engineData);
+                window.XLSX.utils.book_append_sheet(wb, engineWS, '搜索引擎');
                 
                 // 导出文件
                 const fileName = `website-data-${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -824,6 +985,70 @@ const DataManagerApp = {
                             paymentType: website.paymentType || 'free',
                             order: website.order || 0
                         });
+                    }
+                }
+
+                // 导入筛选标签（按 key 去重，并在重复时更新）
+                if (data.filters && data.filters.length > 0) {
+                    const seenKeys = new Set();
+                    for (const tag of data.filters) {
+                        const keyLower = (tag.key || '').trim().toLowerCase();
+                        if (!keyLower) continue;
+                        if (seenKeys.has(keyLower)) continue;
+                        seenKeys.add(keyLower);
+
+                        const tagData = {
+                            id: tag.id || this.generateId(),
+                            name: tag.name,
+                            key: tag.key,
+                            backgroundColor: tag.backgroundColor || '#3b82f6',
+                            order: tag.order || 0
+                        };
+                        try {
+                            await this.dbService.addFilter(tagData);
+                        } catch (error) {
+                            if (String(error.message || '').includes('key 已存在')) {
+                                const existingFilters = await this.dbService.getFilters();
+                                const exist = existingFilters.find(f => (f.key || '').toLowerCase() === keyLower);
+                                if (exist) {
+                                    await this.dbService.updateFilter({ ...exist, ...tagData, id: exist.id });
+                                }
+                            } else {
+                                throw error;
+                            }
+                        }
+                    }
+                }
+
+                // 导入搜索引擎（按名称去重，并在重复时更新）
+                if (data.searchEngines && data.searchEngines.length > 0) {
+                    const seenNames = new Set();
+                    for (const engine of data.searchEngines) {
+                        const nameLower = (engine.name || '').trim().toLowerCase();
+                        const template = (engine.template || '').trim();
+                        if (!nameLower || !template) continue;
+                        if (seenNames.has(nameLower)) continue;
+                        seenNames.add(nameLower);
+
+                        const engineData = {
+                            id: engine.id || this.generateId(),
+                            name: engine.name,
+                            template: template,
+                            order: engine.order || 0
+                        };
+                        try {
+                            await this.dbService.addSearchEngine(engineData);
+                        } catch (error) {
+                            if (String(error.message || '').includes('名称已存在')) {
+                                const existingEngines = await this.dbService.getSearchEngines();
+                                const exist = existingEngines.find(e => (e.name || '').toLowerCase() === nameLower);
+                                if (exist) {
+                                    await this.dbService.updateSearchEngine({ ...exist, ...engineData, id: exist.id });
+                                }
+                            } else {
+                                throw error;
+                            }
+                        }
                     }
                 }
                 
