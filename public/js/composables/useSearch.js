@@ -87,6 +87,8 @@ export const loadSearchEngines = async () => {
         await indexedDBService.init();
         const engines = await indexedDBService.getSearchEngines();
         searchEngines.value = (engines || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+        // 规范化一次，确保顺序无重复且从0开始递增
+        await normalizeEngineOrders();
     } catch (error) {
         console.error('加载搜索引擎失败:', error);
         searchEngines.value = [];
@@ -192,7 +194,7 @@ export const saveEngine = async () => {
             name: engineForm.name.trim(),
             template: engineForm.template.trim(),
             icon: engineForm.icon || '🔍',
-            order: Number(engineForm.order) || 0
+            order: Number(engineForm.order) || getNextEngineOrder()
         };
         if (editingEngine.value && editingEngine.value.id) {
             await indexedDBService.updateSearchEngine({ id: editingEngine.value.id, ...payload });
@@ -249,5 +251,36 @@ export const moveEngineDown = async (engineId) => {
         await indexedDBService.updateSearchEngine(next);
         await indexedDBService.updateSearchEngine(cur);
         await loadSearchEngines();
+    }
+};
+
+// 计算下一个唯一排序值，避免与现有条目重复
+const getNextEngineOrder = () => {
+    const list = searchEngines.value || [];
+    if (!list.length) return 0;
+    return Math.max(...list.map(e => e.order || 0)) + 1;
+};
+
+// 规范化排序：确保顺序从0开始连续递增，解决历史重复order导致无法移动的问题
+export const normalizeEngineOrders = async () => {
+    try {
+        await indexedDBService.init();
+        const list = [...(searchEngines.value || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+        let changed = false;
+        for (let i = 0; i < list.length; i++) {
+            const expected = i;
+            const current = list[i].order || 0;
+            if (current !== expected) {
+                list[i].order = expected;
+                await indexedDBService.updateSearchEngine(list[i]);
+                changed = true;
+            }
+        }
+        if (changed) {
+            // 本地更新已排序列表
+            searchEngines.value = list;
+        }
+    } catch (error) {
+        console.error('规范化搜索引擎排序失败:', error);
     }
 };
