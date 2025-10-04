@@ -215,9 +215,9 @@
 					
                     <div class="filter-buttons">
                         <button class="filter-btn" :class="{ active: currentFilter === 'all' }" @click="setFilter('all')" type="button">全部</button>
-                        <button class="filter-btn"
+                        <button class="filter-btn has-bg"
                                 v-for="tag in filterTags" :key="tag.id"
-                                :style="{ backgroundColor: tag.backgroundColor }"
+                                :style="{ backgroundColor: tag.backgroundColor, borderColor: tag.backgroundColor, color: '#ffffff' }"
                                 :class="{ active: currentFilter === tag.key }"
                                 @click="setFilter(tag.key)"
                                 type="button">
@@ -498,11 +498,11 @@
                 <div class="filter-list">
                     <div class="filter-item" v-for="tag in filterTags" :key="tag.id">
                         <span class="filter-preview" :style="{ backgroundColor: tag.backgroundColor }">{{ tag.name }} ({{ tag.key }})</span>
-                        <div class="actions">
-                            <button class="btn btn-secondary" @click="startEditFilter(tag)" type="button">编辑</button>
-                            <button class="btn btn-danger" @click="deleteFilter(tag.id)" type="button">删除</button>
-                            <button class="btn btn-secondary" @click="moveFilterUp(tag.id)" type="button">上移</button>
-                            <button class="btn btn-secondary" @click="moveFilterDown(tag.id)" type="button">下移</button>
+                        <div class="filter-actions">
+                            <button class="icon-btn" @click="startEditFilter(tag)" type="button" title="编辑" aria-label="编辑">✏️</button>
+                            <button class="icon-btn" @click="deleteFilter(tag.id)" type="button" title="删除" aria-label="删除">🗑️</button>
+                            <button class="icon-btn" @click="moveFilterUp(tag.id)" type="button" title="上移" aria-label="上移">↑</button>
+                            <button class="icon-btn" @click="moveFilterDown(tag.id)" type="button" title="下移" aria-label="下移">↓</button>
                         </div>
                     </div>
                 </div>
@@ -516,7 +516,7 @@
                 </div>
                 <div class="form-group">
                     <label for="filterColor">背景色</label>
-                    <input id="filterColor" type="color" v-model="filterForm.backgroundColor">
+                    <input id="filterColor" type="color" v-model="filterForm.backgroundColor" :style="{borderColor:filterForm.backgroundColor, backgroundColor: filterForm.backgroundColor }">
                 </div>
             </div>
             <div class="modal-footer">
