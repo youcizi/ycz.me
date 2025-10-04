@@ -2,6 +2,7 @@
  * IndexedDB 数据库服务
  * 负责管理本地数据存储
  */
+import { fetchDefaultData } from './DefaultDataProvider.js';
 class IndexedDBService {
     constructor() {
         this.dbName = 'NavigationDB';
@@ -21,14 +22,57 @@ class IndexedDBService {
         try {
             const db = await new Promise((resolve, reject) => {
                 const request = indexedDB.open(this.dbName, this.dbVersion);
+                let needsSeeding = false;
 
                 request.onerror = () => {
                     console.error('数据库打开失败:', request.error);
                     reject(new Error('数据库打开失败: ' + request.error));
                 };
 
-                request.onsuccess = () => {
-                    resolve(request.result);
+                request.onsuccess = async () => {
+                    const db = request.result;
+                    // 若为首次创建数据库，需要在成功打开后写入默认数据，再返回实例
+                    if (needsSeeding) {
+                        try {
+                            const defaults = await fetchDefaultData();
+                            const seedTxn = db.transaction(['categories','websites','filters','searchEngines'], 'readwrite');
+
+                            const catStore = seedTxn.objectStore('categories');
+                            for (const cat of (defaults.categories || [])) {
+                                try { catStore.add(cat); } catch (e) { console.warn('默认分类插入失败:', cat && cat.name, e); }
+                            }
+
+                            const filterStore = seedTxn.objectStore('filters');
+                            for (const filter of (defaults.filters || [])) {
+                                try { filterStore.add(filter); } catch (e) { console.warn('默认筛选插入失败:', filter && filter.name, e); }
+                            }
+
+                            const engineStore = seedTxn.objectStore('searchEngines');
+                            for (const engine of (defaults.searchEngines || [])) {
+                                try { engineStore.add(engine); } catch (e) { console.warn('默认搜索引擎插入失败:', engine && engine.name, e); }
+                            }
+
+                            const siteStore = seedTxn.objectStore('websites');
+                            for (const site of (defaults.websites || [])) {
+                                try { siteStore.add(site); } catch (e) { console.warn('默认网站插入失败:', site && site.name, e); }
+                            }
+
+                            seedTxn.oncomplete = () => {
+                                console.log('首次初始化默认数据写入完成');
+                                resolve(db);
+                            };
+                            seedTxn.onerror = () => {
+                                console.error('默认数据写入事务失败:', seedTxn.error);
+                                // 即使写入失败也返回db，以便应用可运行
+                                resolve(db);
+                            };
+                        } catch (seedErr) {
+                            console.error('默认数据写入失败:', seedErr);
+                            resolve(db);
+                        }
+                    } else {
+                        resolve(db);
+                    }
                 };
 
                 request.onupgradeneeded = (event) => {
@@ -92,6 +136,11 @@ class IndexedDBService {
                         }
 
                         console.log('数据库结构创建完成');
+
+                        // 首次创建数据库（oldVersion === 0）时，标记需要在打开成功后写入默认数据
+                        if (oldVersion === 0) {
+                            needsSeeding = true;
+                        }
                     } catch (error) {
                         console.error('数据库结构创建失败:', error);
                         throw error;
@@ -916,7 +965,7 @@ class IndexedDBService {
      */
     async clearAllData() {
         try {
-            const stores = ['categories', 'websites', 'filters'];
+            const stores = ['categories', 'websites', 'filters', 'searchEngines'];
             
             for (const storeName of stores) {
                 await this.executeTransaction(storeName, 'readwrite', (store) => {

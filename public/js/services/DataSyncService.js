@@ -3,11 +3,13 @@
  * 负责服务器数据获取和本地数据同步
  */
 import indexedDBService from './IndexedDBService.js';
+import { fetchDefaultData } from './DefaultDataProvider.js';
 
 class DataSyncService {
     constructor() {
         this.isInitialized = false;
         this.isInitializing = false;
+        // 默认数据改由 DefaultDataProvider 异步提供
         this.defaultData = {
             categories: [
                 {
@@ -65,6 +67,60 @@ class DataSyncService {
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 }
+            ],
+            // 默认筛选标签
+            filters: [
+                {
+                    name: '免费',
+                    key: 'free',
+                    backgroundColor: '#10b981',
+                    order: 0,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                },
+                {
+                    name: '付费',
+                    key: 'paid',
+                    backgroundColor: '#ef4444',
+                    order: 1,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                },
+                {
+                    name: '积分',
+                    key: 'points',
+                    backgroundColor: '#f59e0b',
+                    order: 2,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }
+            ],
+            // 默认搜索引擎
+            searchEngines: [
+                {
+                    name: 'Google',
+                    template: 'https://www.google.com/search?q={q}',
+                    icon: '🔍',
+                    order: 0,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                },
+                {
+                    name: '百度',
+                    template: 'https://www.baidu.com/s?wd={q}',
+                    icon: '🔍',
+                    order: 1,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                },
+                {
+                    name: '必应',
+                    template: 'https://www.bing.com/search?q={q}',
+                    icon: '🔍',
+                    order: 2,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }
             ]
         };
     }
@@ -99,20 +155,18 @@ class DataSyncService {
             // 初始化IndexedDB
             await indexedDBService.init();
             
-            // 检查是否有本地数据
-            const [categories, websites] = await Promise.all([
+            // 检查是否有本地数据（分类、网站、筛选、搜索引擎）
+            const [categories, websites, filters, engines] = await Promise.all([
                 indexedDBService.getCategories(),
-                indexedDBService.getWebsites()
+                indexedDBService.getWebsites(),
+                indexedDBService.getFilters(),
+                indexedDBService.getSearchEngines()
             ]);
             
-            console.log(`本地数据检查: 分类${categories.length}个, 网站${websites.length}个`);
+            console.log(`本地数据检查: 分类${categories.length}个, 网站${websites.length}个, 筛选${filters.length}个, 搜索引擎${engines.length}个`);
             
-            if (categories.length === 0) {
-                console.log('未发现本地数据，加载默认数据...');
-                await this.loadDefaultData();
-            } else {
-                console.log('发现本地数据，使用本地数据');
-            }
+            // 默认数据在 IndexedDB 首次建库时写入，此处不再自动写入，保持用户数据主导
+            console.log('跳过默认数据加载：默认数据由数据库结构创建时写入');
             
             this.isInitialized = true;
             this.isInitializing = false;
@@ -229,9 +283,12 @@ class DataSyncService {
         try {
             console.log('开始加载默认数据...');
             
+            // 从提供者异步获取默认数据
+            const defaultData = await fetchDefaultData();
+
             // 先添加默认分类
             const addedCategories = [];
-            for (const category of this.defaultData.categories) {
+            for (const category of (defaultData.categories || [])) {
                 try {
                     const addedCategory = await indexedDBService.addCategory(category);
                     addedCategories.push(addedCategory);
@@ -243,7 +300,7 @@ class DataSyncService {
             
             // 再添加默认网站
             const addedWebsites = [];
-            for (const website of this.defaultData.websites) {
+            for (const website of (defaultData.websites || [])) {
                 try {
                     const addedWebsite = await indexedDBService.addWebsite(website);
                     addedWebsites.push(addedWebsite);
@@ -252,11 +309,37 @@ class DataSyncService {
                     console.error(`添加网站失败: ${website.name}`, error);
                 }
             }
+
+            // 添加默认筛选标签
+            const addedFilters = [];
+            for (const filter of (defaultData.filters || [])) {
+                try {
+                    const addedFilter = await indexedDBService.addFilter(filter);
+                    addedFilters.push(addedFilter);
+                    console.log(`添加筛选标签成功: ${filter.name}`);
+                } catch (error) {
+                    console.error(`添加筛选标签失败: ${filter.name}`, error);
+                }
+            }
+
+            // 添加默认搜索引擎
+            const addedEngines = [];
+            for (const engine of (defaultData.searchEngines || [])) {
+                try {
+                    const addedEngine = await indexedDBService.addSearchEngine(engine);
+                    addedEngines.push(addedEngine);
+                    console.log(`添加搜索引擎成功: ${engine.name}`);
+                } catch (error) {
+                    console.error(`添加搜索引擎失败: ${engine.name}`, error);
+                }
+            }
             
-            console.log(`默认数据加载完成: 分类${addedCategories.length}个, 网站${addedWebsites.length}个`);
+            console.log(`默认数据加载完成: 分类${addedCategories.length}个, 网站${addedWebsites.length}个, 筛选${addedFilters.length}个, 搜索引擎${addedEngines.length}个`);
             return {
                 categories: addedCategories,
-                websites: addedWebsites
+                websites: addedWebsites,
+                filters: addedFilters,
+                searchEngines: addedEngines
             };
         } catch (error) {
             console.error('加载默认数据失败:', error);

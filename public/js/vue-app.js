@@ -52,7 +52,7 @@ import {
 } from './composables/useWebsites.js';
 
 import {
-    setFilter, applyFilters, loadSearchEngines, ensureDefaultSearchEngines,
+    setFilter, applyFilters, loadSearchEngines,
     switchSearchMode, selectExternalEngine, performSearch,
     openEngineManager, closeEngineManager, resetEngineForm,
     startAddEngine, startEditEngine, saveEngine, deleteEngine,
@@ -112,7 +112,6 @@ const app = createApp({
                     loadSearchEngines(),
                     loadFilters()
                 ]);
-                await ensureDefaultSearchEngines();
             } catch (error) {
                 console.error('加载数据失败:', error);
             } finally {

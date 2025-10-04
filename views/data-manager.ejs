@@ -164,6 +164,25 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- 恢复默认数据 -->
+                        <div class="export-section">
+                            <div class="section-header">
+                                <h3><i class="fas fa-undo"></i> 恢复默认数据</h3>
+                                <p class="section-desc">清空本地数据并写入系统默认数据（建议先备份）</p>
+                            </div>
+
+                            <div class="export-buttons">
+                                <button @click="exportAsJSON" class="export-btn json-btn">
+                                    <i class="fas fa-download"></i>
+                                    备份当前数据
+                                </button>
+                                <button @click="restoreDefault" class="export-btn excel-btn" style="background:#ef4444; border-color:#ef4444;">
+                                    <i class="fas fa-trash-restore"></i>
+                                    恢复默认
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -26,9 +26,13 @@ const DataManagerApp = {
             
             // IndexedDB 服务实例
             dbService: null,
+            // DataSync 服务实例
+            dataSync: null,
             
             // 导入警告状态
-            importWarningShown: false
+            importWarningShown: false,
+            // 恢复默认警告状态
+            restoreWarningShown: false
         };
     },
     
@@ -40,6 +44,10 @@ const DataManagerApp = {
             // 使用导入的服务实例
             this.dbService = indexedDBService;
             await this.dbService.init();
+
+            // 动态导入 DataSync 服务
+            const { default: dataSyncService } = await import('./services/DataSyncService.js');
+            this.dataSync = dataSyncService;
             
             // 加载统计信息
             await this.loadStats();
@@ -116,6 +124,12 @@ const DataManagerApp = {
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+
+        // 恢复默认数据（弹窗确认）
+        async restoreDefault() {
+            // 直接弹出复用的警告弹窗
+            this.showRestoreWarning();
         },
         
         // 导入数据
@@ -300,7 +314,50 @@ const DataManagerApp = {
                 this.isImporting = false;
             }
         },
-        
+
+        // 显示恢复默认警告（使用通用弹窗）
+        showRestoreWarning() {
+            this.showWarningModal({
+                overlayId: 'restoreWarningOverlay',
+                title: '恢复默认数据警告',
+                description: '此操作将清空当前数据库并写入系统默认数据！',
+                confirmText: '确认恢复',
+                onConfirm: async () => {
+                    await this.proceedRestoreDefault();
+                }
+            });
+        },
+
+        // 取消恢复
+        cancelRestore() {
+            const overlay = document.getElementById('restoreWarningOverlay');
+            if (overlay) {
+                overlay.remove();
+            }
+            this.restoreWarningShown = false;
+            this.showStatus('恢复操作已取消', 'info');
+        },
+
+        // 执行恢复默认流程
+        async proceedRestoreDefault() {
+            this.isImporting = true;
+            try {
+                // 确保 DataSync 服务可用
+                if (!this.dataSync) {
+                    const { default: dataSyncService } = await import('./services/DataSyncService.js');
+                    this.dataSync = dataSyncService;
+                }
+                await this.dataSync.resetToDefault();
+                this.showStatus('已恢复为默认数据', 'success');
+                await this.loadStats();
+            } catch (error) {
+                console.error('恢复默认失败:', error);
+                this.showStatus('恢复默认失败: ' + error.message, 'error');
+            } finally {
+                this.isImporting = false;
+            }
+        },
+
         // 读取 JSON 文件
         readJSONFile(file) {
             return new Promise((resolve, reject) => {
@@ -705,79 +762,83 @@ const DataManagerApp = {
             }
         },
 
-        // 显示导入警告
-        showImportWarning() {
-            // 检查是否已存在警告对话框
-            const existingOverlay = document.getElementById('importWarningOverlay');
+        // 通用警告弹窗（传入标题、确认按钮文案与确认回调）
+        showWarningModal({ overlayId = 'commonWarningOverlay', title = '操作警告', description = '', confirmText = '确认', onConfirm }) {
+            // 若已存在同名弹窗，先移除
+            const existingOverlay = document.getElementById(overlayId);
             if (existingOverlay) {
                 existingOverlay.remove();
             }
-            
+
             const warningHtml = `
-                <div class="import-warning-overlay" id="importWarningOverlay">
+                <div class="import-warning-overlay" id="${overlayId}">
                     <div class="import-warning-dialog">
                         <div class="warning-icon">⚠️</div>
-                        <h3>数据导入警告</h3>
+                        <h3>${title}</h3>
                         <div class="warning-content">
-                             <p><strong>⚠️ 注意：导入操作将会完全覆盖当前数据库中的所有内容！</strong></p>
+                             ${description ? `<p><strong>⚠️ ${description}</strong></p>` : ''}
                              <div class="warning-details">
                                  <h4>📋 操作详情：</h4>
                                  <ul>
-                                     <li>🗑️ 现有的所有分类和网站数据将被删除</li>
+                                     <li>🗑️ 现有数据将被删除或覆盖</li>
                                      <li>🚫 此操作无法撤销</li>
-                                     <li>💾 建议在导入前先导出当前数据作为备份</li>
+                                     <li>💾 建议在操作前先导出当前数据作为备份</li>
                                  </ul>
                              </div>
                              <div class="confirmation-steps">
                                  <h4>✅ 确认步骤：</h4>
                                  <p>1. 点击"先备份数据"保存当前数据（推荐）</p>
                                  <p>2. 或点击"取消"终止操作</p>
-                                 <p>3. 如确定继续，请点击"确认导入"按钮</p>
+                                 <p>3. 如确定继续，请点击"${confirmText}"按钮</p>
                              </div>
                          </div>
                         <div class="warning-actions">
-                            <button class="btn-cancel" id="cancelImportBtn">取消</button>
-                            <button class="btn-backup" id="backupDataBtn">先备份数据</button>
-                            <button class="btn-confirm" id="confirmImportBtn">确认导入</button>
+                            <button class="btn-cancel">取消</button>
+                            <button class="btn-backup">先备份数据</button>
+                            <button class="btn-confirm">${confirmText}</button>
                         </div>
                     </div>
                 </div>
             `;
-            
-            // 添加警告对话框到页面（只添加一次）
+
+            // 添加弹窗到页面
             document.body.insertAdjacentHTML('beforeend', warningHtml);
-            
-            // 绑定事件监听器
-            const cancelBtn = document.getElementById('cancelImportBtn');
-            const backupBtn = document.getElementById('backupDataBtn');
-            const confirmBtn = document.getElementById('confirmImportBtn');
-            
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', () => {
-                    console.log('取消按钮被点击');
-                    this.cancelImport();
-                });
-            }
-            
-            if (backupBtn) {
-                backupBtn.addEventListener('click', () => {
-                    console.log('备份按钮被点击');
-                    this.exportData();
-                    // 备份完成后不关闭对话框，让用户可以继续确认导入
-                    this.showStatus('数据备份完成，您现在可以安全地进行导入操作', 'success');
-                });
-            }
-            
-            if (confirmBtn) {
-                confirmBtn.addEventListener('click', () => {
-                    console.log('确认导入按钮被点击');
-                    this.cancelImport();
-                    // 继续导入流程
-                    this.proceedWithImport();
-                });
-            }
-            
-            // 添加样式
+            const overlayEl = document.getElementById(overlayId);
+
+            // 绑定事件
+            const cancelBtn = overlayEl?.querySelector('.btn-cancel');
+            const backupBtn = overlayEl?.querySelector('.btn-backup');
+            const confirmBtn = overlayEl?.querySelector('.btn-confirm');
+
+            cancelBtn?.addEventListener('click', () => {
+                overlayEl.remove();
+                if (overlayId === 'importWarningOverlay') {
+                    this.importWarningShown = false;
+                    this.showStatus('导入操作已取消', 'info');
+                } else if (overlayId === 'restoreWarningOverlay') {
+                    this.restoreWarningShown = false;
+                    this.showStatus('恢复操作已取消', 'info');
+                }
+            });
+
+            backupBtn?.addEventListener('click', () => {
+                this.exportData();
+                this.showStatus('数据备份完成，您现在可以继续操作', 'success');
+            });
+
+            confirmBtn?.addEventListener('click', async () => {
+                overlayEl.remove();
+                try {
+                    if (typeof onConfirm === 'function') {
+                        await onConfirm();
+                    }
+                } catch (error) {
+                    console.error('确认操作失败:', error);
+                    this.showStatus('操作失败: ' + error.message, 'error');
+                }
+            });
+
+            // 注入样式（若未注入则注入一次）
             if (!document.getElementById('importWarningStyles')) {
                 const styles = `
                     <style id="importWarningStyles">
@@ -914,6 +975,19 @@ const DataManagerApp = {
                 `;
                 document.head.insertAdjacentHTML('beforeend', styles);
             }
+        },
+
+        // 显示导入警告（使用通用弹窗）
+        showImportWarning() {
+            this.showWarningModal({
+                overlayId: 'importWarningOverlay',
+                title: '数据导入警告',
+                description: '注意：导入操作将会完全覆盖当前数据库中的所有内容！',
+                confirmText: '确认导入',
+                onConfirm: async () => {
+                    await this.proceedWithImport();
+                }
+            });
         },
 
         // 取消导入
