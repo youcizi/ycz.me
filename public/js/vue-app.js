@@ -106,6 +106,9 @@ const app = createApp({
         const loadData = async () => {
             isLoading.value = true;
             try {
+                // 先统一等待数据库初始化，避免并发加载时的竞态
+                await indexedDBService.init();
+
                 await Promise.all([
                     loadCategories(),
                     loadWebsites(),

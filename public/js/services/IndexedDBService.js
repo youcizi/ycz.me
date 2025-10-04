@@ -9,6 +9,8 @@ class IndexedDBService {
         this.dbVersion = 4;
         this.db = null;
         this.isInitialized = false;
+        // 防止并发初始化导致未等待默认数据播种完成
+        this.initPromise = null;
     }
 
     /**
@@ -19,8 +21,13 @@ class IndexedDBService {
             return this.db;
         }
 
+        // 若已有进行中的初始化，复用同一Promise，确保并发等待播种
+        if (this.initPromise) {
+            return this.initPromise;
+        }
+
         try {
-            const db = await new Promise((resolve, reject) => {
+            this.initPromise = new Promise((resolve, reject) => {
                 const request = indexedDB.open(this.dbName, this.dbVersion);
                 let needsSeeding = false;
 
@@ -148,6 +155,7 @@ class IndexedDBService {
                 };
             });
 
+            const db = await this.initPromise;
             this.db = db;
             this.isInitialized = true;
             console.log('数据库初始化成功');
