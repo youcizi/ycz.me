@@ -30,10 +30,20 @@
                                 <button class="cal-btn" @click.stop="gotoToday">今天</button>
                             </div>
 							
-							<div class="calendar-header">
+                            <div class="calendar-header">
                                 <button class="cal-btn" @click.stop="prevMonth">‹</button>
-                                <span class="cal-title">{{ viewYear }}年{{ viewMonth + 1 }}月</span>
+                                <span class="cal-title" @click.stop="openYmPicker">{{ viewYear }}年{{ viewMonth + 1 }}月</span>
                                 <button class="cal-btn" @click.stop="nextMonth">›</button>
+                            </div>
+                            <div class="ym-picker" v-if="ymPickerVisible" @click.stop>
+                                <select id="ymYearSelect" v-model="ymSelectYear">
+                                    <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}年</option>
+                                </select>
+                                <select id="ymMonthSelect" v-model="ymSelectMonth">
+                                    <option v-for="m in monthOptions" :key="m" :value="m">{{ m }}月</option>
+                                </select>
+                                <button id="ymApplyBtn" class="cal-btn" @click.stop="applyYmSelection">确定</button>
+                                <button id="ymCancelBtn" class="cal-btn" @click.stop="closeYmPicker">取消</button>
                             </div>
                             <div class="calendar-grid">
                                 <div class="cal-weekday" v-for="w in ['日','一','二','三','四','五','六']" :key="w">{{ w }}</div>
@@ -41,6 +51,9 @@
                                     <div class="day-num">{{ d.date.getDate() }}</div>
                                     <div class="day-lunar">{{ d.lunar }}</div>
                                 </div>
+                            </div>
+                            <div class="calendar-footer">
+                                <button class="cal-btn" @click.stop="gotoToday">今天</button>
                             </div>
                             
                         </div>
@@ -79,13 +92,73 @@
 
                     <!-- 不同工具的占位内容（后续可扩展为具体功能） -->
                     <div v-if="currentToolId === 'timestamp'" class="tool-panel">
-                        <p class="placeholder">时间戳转换占位：可在此实现秒/毫秒与日期互转。</p>
+                      <div class="tool-form" aria-label="时间戳转换">
+                        <div class="tool-row">
+                          <label class="tool-label">时间戳</label>
+                          <input class="tool-input" type="text" placeholder="输入秒或毫秒级时间戳" v-model="tsInput">
+                          <select class="tool-select" v-model="tsUnit">
+                            <option value="s">秒</option>
+                            <option value="ms">毫秒</option>
+                          </select>
+                          <button class="tool-btn" @click="tsToDate">转为日期</button>
+                        </div>
+                        <div class="tool-output" v-if="tsToDateOutput">
+                          <span class="output-label">日期：</span>
+                          <span class="output-value">{{ tsToDateOutput }}</span>
+                        </div>
+
+                        <div class="tool-divider"></div>
+
+                        <div class="tool-row">
+                          <label class="tool-label">日期时间</label>
+                          <input class="tool-input" type="datetime-local" step="1" v-model="dtInput">
+                          <select class="tool-select" v-model="dtOutputUnit">
+                            <option value="s">秒</option>
+                            <option value="ms">毫秒</option>
+                          </select>
+                          <button class="tool-btn" @click="dateToTs">转为时间戳</button>
+                        </div>
+                        <div class="tool-output" v-if="dtToTsOutput">
+                          <span class="output-label">时间戳：</span>
+                          <span class="output-value">{{ dtToTsOutput }}</span>
+                        </div>
+                      </div>
                     </div>
+
                     <div v-else-if="currentToolId === 'base64'" class="tool-panel">
-                        <p class="placeholder">Base64 编解码占位：在此输入文本进行编码/解码。</p>
+                      <div class="tool-form" aria-label="Base64 编解码">
+                        <div class="tool-row column">
+                          <label class="tool-label">输入文本</label>
+                          <textarea class="tool-textarea" rows="6" placeholder="在此输入需要编解码的文本" v-model="b64Input"></textarea>
+                        </div>
+                        <div class="tool-actions">
+                          <button class="tool-btn primary" @click="b64Encode">编码</button>
+                          <button class="tool-btn" @click="b64Decode">解码</button>
+                          <button class="tool-btn ghost" @click="clearB64">清空</button>
+                        </div>
+                        <div class="tool-row column">
+                          <label class="tool-label">输出结果</label>
+                          <textarea class="tool-textarea" rows="6" readonly v-model="b64Output"></textarea>
+                        </div>
+                      </div>
                     </div>
+
                     <div v-else-if="currentToolId === 'url'" class="tool-panel">
-                        <p class="placeholder">URL 编解码占位：在此输入文本进行URL编码/解码。</p>
+                      <div class="tool-form" aria-label="URL 编解码">
+                        <div class="tool-row column">
+                          <label class="tool-label">输入文本</label>
+                          <textarea class="tool-textarea" rows="6" placeholder="在此输入需要URL编解码的文本" v-model="urlInput"></textarea>
+                        </div>
+                        <div class="tool-actions">
+                          <button class="tool-btn primary" @click="urlEncode">编码</button>
+                          <button class="tool-btn" @click="urlDecode">解码</button>
+                          <button class="tool-btn ghost" @click="clearUrl">清空</button>
+                        </div>
+                        <div class="tool-row column">
+                          <label class="tool-label">输出结果</label>
+                          <textarea class="tool-textarea" rows="6" readonly v-model="urlOutput"></textarea>
+                        </div>
+                      </div>
                     </div>
                     <div v-else class="tool-panel">
                         <p class="placeholder">请选择左侧工具查看具体内容。</p>

@@ -93,6 +93,75 @@
   font-size: 14px;
 }
 
+/* 工具表单与交互样式 */
+.tool-form { display: flex; flex-direction: column; gap: 12px; }
+.tool-row { display: flex; align-items: center; gap: 10px; }
+.tool-row.column { flex-direction: column; align-items: stretch; }
+.tool-label { color: #374151; font-size: 13px; min-width: 72px; }
+.tool-input, .tool-select {
+  height: 34px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.tool-input { flex: 1; min-width: 220px; }
+.tool-select { min-width: 90px; }
+.tool-input:focus, .tool-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+.tool-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.tool-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+.tool-actions { display: flex; gap: 10px; }
+.tool-btn {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 14px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tool-btn:hover { background: #e5e7eb; }
+.tool-btn.primary { background: #4f46e5; border-color: #4f46e5; color: #ffffff; }
+.tool-btn.primary:hover { background: #4338ca; border-color: #4338ca; }
+.tool-btn.ghost { background: transparent; border-color: #d1d5db; }
+.tool-output {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px dashed #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.output-label { color: #6b7280; font-size: 13px; }
+.output-value { color: #111827; font-size: 14px; word-break: break-all; }
+.tool-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
 /* 作用域覆盖：工具页不使用首页左侧站点侧栏，移除主内容左侧留白 */
 .tools-page .main-content {
   margin-left: 0;
@@ -138,6 +207,41 @@
   margin-bottom: 8px;
   padding-left: 12px;
   padding-right: 12px;
+}
+.ym-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+.ym-picker select {
+  height: 32px;
+  min-width: 110px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.ym-picker select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+#ymYearSelect { min-width: 130px; }
+#ymMonthSelect { min-width: 100px; }
+.ym-picker .cal-btn {
+  padding: 6px 12px;
+}
+.ym-picker .cal-btn:hover {
+  background: #e5e7eb;
+  color: #1f2937;
 }
 .calendar-footer {
 	padding-bottom: 12px;

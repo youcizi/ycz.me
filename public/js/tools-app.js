@@ -10,6 +10,19 @@ const ToolsApp = {
         { id: 'url', name: 'URL 编解码', icon: '🔗' }
       ],
       currentToolId: 'timestamp',
+      // 时间戳转换
+      tsInput: '',
+      tsUnit: 's', // s|ms
+      tsToDateOutput: '',
+      dtInput: '', // datetime-local 字符串
+      dtOutputUnit: 's', // s|ms
+      dtToTsOutput: '',
+      // Base64
+      b64Input: '',
+      b64Output: '',
+      // URL
+      urlInput: '',
+      urlOutput: '',
       // 日历相关
       calendarVisible: false,
       viewYear: new Date().getFullYear(),
@@ -18,7 +31,13 @@ const ToolsApp = {
       // 定位与天气（默认北京）
       locationName: '北京',
       weatherVisible: false,
-      dateTriggerEl: null
+      dateTriggerEl: null,
+      // 年月选择器
+      ymPickerVisible: false,
+      ymSelectYear: new Date().getFullYear(),
+      ymSelectMonth: new Date().getMonth() + 1,
+      yearOptions: [],
+      monthOptions: []
     };
   },
   computed: {
@@ -67,9 +86,83 @@ const ToolsApp = {
     selectTool(id) {
       this.currentToolId = id;
     },
+    // 时间戳转换
+    tsToDate() {
+      const raw = (this.tsInput || '').trim();
+      if (!raw) { this.tsToDateOutput = ''; return; }
+      let num = Number(raw);
+      if (!Number.isFinite(num)) { this.tsToDateOutput = '输入不是有效数字'; return; }
+      // 允许输入过长/过短的字符串，做简单归一
+      if (this.tsUnit === 's') {
+        // 若明显是毫秒（>=1e12），仍按毫秒处理
+        num = num >= 1e12 ? num : num * 1000;
+      } else {
+        // ms
+        num = num >= 1e12 ? num : num; // 保持毫秒
+      }
+      const d = new Date(num);
+      if (isNaN(d.getTime())) { this.tsToDateOutput = '无法解析为日期'; return; }
+      this.tsToDateOutput = this.formatDateTime(d);
+    },
+    dateToTs() {
+      const s = (this.dtInput || '').trim();
+      if (!s) { this.dtToTsOutput = ''; return; }
+      const d = new Date(s);
+      if (isNaN(d.getTime())) { this.dtToTsOutput = '无法解析输入的日期时间'; return; }
+      const ms = d.getTime();
+      this.dtToTsOutput = this.dtOutputUnit === 's' ? String(Math.floor(ms / 1000)) : String(ms);
+    },
+    formatDateTime(d) {
+      const pad2 = (n) => String(n).padStart(2, '0');
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+      const hh = pad2(d.getHours());
+      const mm = pad2(d.getMinutes());
+      const ss = pad2(d.getSeconds());
+      return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+    },
+    // Base64 编解码
+    b64Encode() {
+      try {
+        // 处理非ASCII字符
+        const utf8 = new TextEncoder().encode(this.b64Input || '');
+        let bin = '';
+        utf8.forEach(b => bin += String.fromCharCode(b));
+        this.b64Output = btoa(bin);
+      } catch (e) {
+        this.b64Output = `编码失败：${e?.message || e}`;
+      }
+    },
+    b64Decode() {
+      try {
+        const bin = atob((this.b64Input || '').trim());
+        const bytes = Uint8Array.from(bin.split('').map(ch => ch.charCodeAt(0)));
+        this.b64Output = new TextDecoder().decode(bytes);
+      } catch (e) {
+        this.b64Output = `解码失败：${e?.message || e}`;
+      }
+    },
+    clearB64() { this.b64Input = ''; this.b64Output = ''; },
+    // URL 编解码
+    urlEncode() {
+      try {
+        this.urlOutput = encodeURIComponent(this.urlInput || '');
+      } catch (e) {
+        this.urlOutput = `编码失败：${e?.message || e}`;
+      }
+    },
+    urlDecode() {
+      try {
+        this.urlOutput = decodeURIComponent((this.urlInput || '').trim());
+      } catch (e) {
+        this.urlOutput = `解码失败：${e?.message || e}`;
+      }
+    },
+    clearUrl() { this.urlInput = ''; this.urlOutput = ''; },
     // 日历相关
     showCalendar() { this.calendarVisible = true; this.weatherVisible = false; },
-    hideCalendar() { this.calendarVisible = false; },
+    hideCalendar() { this.calendarVisible = false; this.ymPickerVisible = false; },
     toggleCalendar() { this.calendarVisible = true; this.weatherVisible = false; },
     prevMonth() {
       if (this.viewMonth === 0) { this.viewMonth = 11; this.viewYear -= 1; }
@@ -78,6 +171,21 @@ const ToolsApp = {
     nextMonth() {
       if (this.viewMonth === 11) { this.viewMonth = 0; this.viewYear += 1; }
       else { this.viewMonth += 1; }
+    },
+    openYmPicker() {
+      this.ymSelectYear = this.viewYear;
+      this.ymSelectMonth = this.viewMonth + 1;
+      this.ymPickerVisible = true;
+    },
+    closeYmPicker() { this.ymPickerVisible = false; },
+    applyYmSelection() {
+      const y = Number(this.ymSelectYear);
+      const m = Number(this.ymSelectMonth) - 1; // 0-11
+      if (!Number.isNaN(y) && !Number.isNaN(m) && m >= 0 && m <= 11) {
+        this.viewYear = y;
+        this.viewMonth = m;
+      }
+      this.ymPickerVisible = false;
     },
     gotoToday() {
       const now = new Date();
@@ -125,6 +233,9 @@ const ToolsApp = {
         { timeout: 2000 }
       );
     }
+    // 初始化年月选项
+    for (let y = 1900; y <= 2100; y++) this.yearOptions.push(y);
+    this.monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
     // 外部点击关闭（仅点击外部隐藏）
     this.dateTriggerEl = document.getElementById('dateTrigger');
     document.addEventListener('click', this.onDocClick);
