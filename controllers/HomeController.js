@@ -17,7 +17,7 @@ class HomeController {
   async index(ctx) {
     try {
       await ctx.render('index', {
-        title: '网站导航',
+        title: 'AI网址导航',
         categories: this.websiteModel.getAllCategories(),
         websites: this.websiteModel.getAllWebsites()
       });
@@ -35,7 +35,7 @@ class HomeController {
   async dataManager(ctx) {
     try {
       await ctx.render('data-manager', {
-        title: '数据管理 - 网站导航'
+        title: '数据管理 - AI网址导航'
       });
     } catch (error) {
       console.error('渲染数据管理页面失败:', error);
@@ -55,7 +55,7 @@ class HomeController {
         year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'long'
       });
       await ctx.render('tools', {
-        title: '在线工具 - 网站导航',
+        title: '在线工具 - AI网址导航',
         currentDateStr
       });
     } catch (error) {
