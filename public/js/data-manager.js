@@ -32,7 +32,16 @@ const DataManagerApp = {
             // 导入警告状态
             importWarningShown: false,
             // 恢复默认警告状态
-            restoreWarningShown: false
+            restoreWarningShown: false,
+            // 后台接口管理
+            apiUrlInput: '',
+            effectiveApiLabel: '使用站点默认接口',
+
+            // 同步到后台
+            syncApiUrlInput: '',
+            effectiveSyncLabel: '未设置',
+            syncSelectedExcel: null,
+            isSyncing: false
         };
     },
     
@@ -48,6 +57,16 @@ const DataManagerApp = {
             // 动态导入 DataSync 服务
             const { default: dataSyncService } = await import('./services/DataSyncService.js');
             this.dataSync = dataSyncService;
+            // 读取自定义默认API地址
+            const { default: configService } = await import('./services/ConfigService.js');
+            const saved = configService.getCustomDefaultApiUrl();
+            this.apiUrlInput = saved || '';
+            this.updateEffectiveApiLabel();
+
+            // 初始化同步接口
+            const syncSaved = configService.getSyncApiUrl();
+            this.syncApiUrlInput = syncSaved || '';
+            this.updateEffectiveSyncLabel();
             
             // 加载统计信息
             await this.loadStats();
@@ -74,7 +93,7 @@ const DataManagerApp = {
                 console.error('加载统计信息失败:', error);
             }
         },
-        
+
         // 拖拽处理
         handleFileDrop(event) {
             event.preventDefault();
@@ -82,6 +101,143 @@ const DataManagerApp = {
             const files = event.dataTransfer.files;
             if (files.length > 0) {
                 this.handleFileSelection(files[0]);
+            }
+        },
+
+        // ================= 后台接口管理 =================
+        updateEffectiveApiLabel() {
+            const url = (this.apiUrlInput || '').trim();
+            this.effectiveApiLabel = url ? `自定义接口：${url}` : '使用站点默认接口';
+        },
+        async saveApiUrl() {
+            try {
+                const { default: configService } = await import('./services/ConfigService.js');
+                const v = configService.setCustomDefaultApiUrl(this.apiUrlInput || '');
+                this.apiUrlInput = v;
+                this.updateEffectiveApiLabel();
+                this.showStatus('接口地址已保存', 'success');
+            } catch (e) {
+                console.error('保存接口地址失败', e);
+                this.showStatus('保存接口地址失败: ' + (e.message || e), 'error');
+            }
+        },
+        async clearApiUrl() {
+            try {
+                const { default: configService } = await import('./services/ConfigService.js');
+                configService.clearCustomDefaultApiUrl();
+                this.apiUrlInput = '';
+                this.updateEffectiveApiLabel();
+                this.showStatus('已清除自定义接口', 'success');
+            } catch (e) {
+                console.error('清除接口地址失败', e);
+                this.showStatus('清除接口地址失败: ' + (e.message || e), 'error');
+            }
+        },
+        
+        // ================= 同步到后台 =================
+        updateEffectiveSyncLabel() {
+            const url = (this.syncApiUrlInput || '').trim();
+            this.effectiveSyncLabel = url ? url : '未设置';
+        },
+        async saveSyncApiUrl() {
+            try {
+                const { default: configService } = await import('./services/ConfigService.js');
+                const v = configService.setSyncApiUrl(this.syncApiUrlInput || '');
+                this.syncApiUrlInput = v;
+                this.updateEffectiveSyncLabel();
+                this.showStatus('同步接口地址已保存', 'success');
+            } catch (e) {
+                console.error('保存同步接口失败', e);
+                this.showStatus('保存同步接口失败: ' + (e.message || e), 'error');
+            }
+        },
+        async clearSyncApiUrl() {
+            try {
+                const { default: configService } = await import('./services/ConfigService.js');
+                configService.clearSyncApiUrl();
+                this.syncApiUrlInput = '';
+                this.updateEffectiveSyncLabel();
+                this.showStatus('已清除同步接口地址', 'success');
+            } catch (e) {
+                console.error('清除同步接口失败', e);
+                this.showStatus('清除同步接口失败: ' + (e.message || e), 'error');
+            }
+        },
+        async collectAllDataForSync() {
+            const [categories, websites, filters, searchEngines] = await Promise.all([
+                this.dbService.getCategories(),
+                this.dbService.getWebsites(),
+                this.dbService.getFilters(),
+                this.dbService.getSearchEngines()
+            ]);
+            return {
+                categories,
+                websites,
+                filters,
+                searchEngines,
+                timestamp: Date.now()
+            };
+        },
+        async syncToBackendJson() {
+            const url = (this.syncApiUrlInput || '').trim();
+            if (!url) {
+                this.showStatus('请先设置同步API地址', 'error');
+                return;
+            }
+            try {
+                this.isSyncing = true;
+                const payload = await this.collectAllDataForSync();
+                const res = await axios.post(url, payload, { headers: { 'Content-Type': 'application/json' } });
+                this.showStatus(`同步完成：HTTP ${res.status}`, 'success');
+            } catch (e) {
+                console.error('同步失败', e);
+                this.showStatus('同步失败: ' + (e?.response?.data?.message || e.message || '未知错误'), 'error');
+            } finally {
+                this.isSyncing = false;
+            }
+        },
+        syncHandleExcelSelect(event) {
+            const file = event.target.files && event.target.files[0];
+            if (file) {
+                this.syncSelectedExcel = file;
+                this.showStatus('已选择文件：' + file.name, 'info');
+            }
+        },
+        async syncUploadExcelToBackend() {
+            const url = (this.syncApiUrlInput || '').trim();
+            if (!url) {
+                this.showStatus('请先设置同步API地址', 'error');
+                return;
+            }
+            if (!this.syncSelectedExcel) {
+                this.showStatus('请先选择Excel文件', 'error');
+                return;
+            }
+            try {
+                this.isSyncing = true;
+                const formData = new FormData();
+                formData.append('file', this.syncSelectedExcel);
+                const res = await axios.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                this.showStatus(`上传完成：HTTP ${res.status}`, 'success');
+            } catch (e) {
+                console.error('上传失败', e);
+                this.showStatus('上传失败: ' + (e?.response?.data?.message || e.message || '未知错误'), 'error');
+            } finally {
+                this.isSyncing = false;
+            }
+        },
+        async testFetchDefaultApi() {
+            try {
+                const { fetchDefaultData } = await import('./services/DefaultDataProvider.js');
+                const data = await fetchDefaultData();
+                const cats = Array.isArray(data.categories) ? data.categories.length : 0;
+                const sites = Array.isArray(data.websites) ? data.websites.length : 0;
+                const filters = Array.isArray(data.filters) ? data.filters.length : 0;
+                const engines = Array.isArray(data.searchEngines) ? data.searchEngines.length : 0;
+                this.showStatus(`测试成功：分类${cats}、网站${sites}、筛选${filters}、搜索引擎${engines}`, 'success');
+            } catch (e) {
+                console.error('测试默认接口失败', e);
+                this.showStatus('测试失败: ' + (e.message || e), 'error');
             }
         },
         

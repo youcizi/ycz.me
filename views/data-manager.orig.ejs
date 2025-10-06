@@ -55,82 +55,6 @@
                         <span class="status-text">{{ statusMessage.text }}</span>
                     </div>
 
-                    <!-- 后台接口管理 -->
-                    <div class="action-section">
-                        <div class="import-section">
-                            <div class="section-header">
-                                <h3><i class="fas fa-link"></i> 后台接口管理</h3>
-                                <p class="section-desc">设置用于首访初始化与“恢复默认”的数据接口地址</p>
-                            </div>
-                            <div class="file-info" style="display:block;">
-                                <div class="file-meta" style="width:100%;">
-                                    <label for="apiUrlInput">自定义默认API地址</label>
-                                    <input id="apiUrlInput" type="text" v-model="apiUrlInput" placeholder="例如：https://your.domain/api/nav.index/default" style="width:100%;padding:10px;margin-top:6px;">
-                                    <div class="file-actions" style="margin-top:10px;display:flex;gap:10px;">
-                                        <button class="btn btn-primary" @click="saveApiUrl">
-                                            <i class="fas fa-save"></i>
-                                            保存接口地址
-                                        </button>
-                                        <button class="btn btn-outline" @click="clearApiUrl">
-                                            <i class="fas fa-eraser"></i>
-                                            清除自定义
-                                        </button>
-                                        <button class="btn btn-secondary" @click="testFetchDefaultApi">
-                                            <i class="fas fa-vial"></i>
-                                            测试拉取数据
-                                        </button>
-                                    </div>
-                                    <div class="drop-subtext" style="margin-top:8px;">
-                                        当前生效：{{ effectiveApiLabel }}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 同步到后台 -->
-                    <div class="action-section">
-                        <div class="import-section">
-                            <div class="section-header">
-                                <h3><i class="fas fa-sync-alt"></i> 同步到后台</h3>
-                                <p class="section-desc">设置同步接口，将本地数据以JSON上传，或上传Excel到后端</p>
-                            </div>
-                            <div class="file-info" style="display:block;">
-                                <div class="file-meta" style="width:100%;">
-                                    <label for="syncApiUrlInput">同步API地址</label>
-                                    <input id="syncApiUrlInput" type="text" v-model="syncApiUrlInput" placeholder="例如：https://your.domain/api/nav.sync/upload" style="width:100%;padding:10px;margin-top:6px;">
-                                    <div class="file-actions" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-                                        <button class="btn btn-primary" @click="saveSyncApiUrl">
-                                            <i class="fas fa-save"></i>
-                                            保存同步地址
-                                        </button>
-                                        <button class="btn btn-outline" @click="clearSyncApiUrl">
-                                            <i class="fas fa-eraser"></i>
-                                            清除同步地址
-                                        </button>
-                                        <button class="btn btn-secondary" @click="syncToBackendJson">
-                                            <i class="fas fa-upload"></i>
-                                            同步当前数据(JSON)
-                                        </button>
-                                        <button class="btn btn-outline" @click="$refs.syncExcelInput.click()">
-                                            <i class="fas fa-file-upload"></i>
-                                            选择Excel上传
-                                        </button>
-                                        <input type="file" ref="syncExcelInput" accept=".xlsx,.xls" style="display:none" @change="syncHandleExcelSelect">
-                                        <button class="btn btn-secondary" @click="syncUploadExcelToBackend" :disabled="!syncSelectedExcel">
-                                            <i class="fas fa-paper-plane"></i>
-                                            上传选中Excel
-                                        </button>
-                                    </div>
-                                    <div class="drop-subtext" style="margin-top:8px;">
-                                        同步地址：{{ effectiveSyncLabel }}
-                                        <span v-if="syncSelectedExcel">｜已选文件：{{ syncSelectedExcel.name }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- 导入导出操作区 -->
                     <div class="action-section">
                         <!-- 导入区域 -->
@@ -283,6 +207,5 @@
 
     <!-- JavaScript -->
     <script type="module" src="/js/data-manager.js"></script>
-    <script type="module" src="/js/data-manager-api-config.js"></script>
 </body>
 </html>
