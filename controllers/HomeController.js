@@ -64,6 +64,22 @@ class HomeController {
       ctx.body = { success: false, message: '服务器内部错误' };
     }
   }
+
+  /**
+   * 渲染AI聊天页面
+   * @param {Object} ctx Koa上下文对象
+   */
+  async aiChat(ctx) {
+    try {
+      await ctx.render('ai-chat', {
+        title: 'AI聊天'
+      });
+    } catch (error) {
+      console.error('渲染AI聊天页面失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
 }
 
 module.exports = HomeController;

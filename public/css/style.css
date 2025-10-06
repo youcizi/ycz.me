@@ -535,7 +535,7 @@ body {
 /* 网站展示区域 */
 .websites-section {
   flex: 1;
-  padding: 24px;
+  padding: 0;
   overflow-y: auto;
   background: #f8f8f8;
 }
@@ -1064,7 +1064,7 @@ footer p + p {
   }
   
   .websites-section {
-    padding: 20px;
+    padding: 0;
   }
   
   .websites-grid {
@@ -1439,7 +1439,7 @@ footer p + p {
   }
   
   .websites-section {
-    padding: 16px;
+    padding: 0;
   }
   
   .websites-grid {

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <meta name="description" content="与AI聊天，支持多模型接入与自定义">
+  <meta name="keywords" content="AI聊天,Chat,OpenAI,DeepSeek,通义千问,豆包">
+
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/tools.css">
+  <!-- Highlight.js 样式（GitHub Dark） -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+  <div id="app" class="app-container tools-page" v-cloak>
+    <main class="main-content">
+      <!-- 顶部导航栏 -->
+      <div class="top-bar">
+        <div class="top-nav-links">
+          <a href="/" class="nav-link">返回首页</a>
+          <a href="/tools" class="nav-link">在线工具</a>
+          <a href="https://github.com/youcizi/ycz.me" target="_blank" class="nav-link">GitHub</a>
+          <a href="/data-manager" class="nav-link">数据管理</a>
+          <span class="nav-link active">AI聊天</span>
+        </div>
+        <div class="top-actions">
+          <button class="btn btn-primary" @click="openConfigModal">编辑配置</button>
+        </div>
+      </div>
+
+
+      <!-- 与首页/工具页一致的留白和卡片布局 -->
+  <section class="websites-section" aria-label="AI聊天">
+        <div class="tools-content">
+
+          <div class="tool-layout-two-cols">
+            <!-- 左侧：会话历史 -->
+            <aside class="tools-sidebar">
+              <ul class="tools-list">
+                <li class="tools-item add-conv" @click="newConversation">
+                  <span class="tool-icon">➕</span>
+                  <span class="tool-name">新建会话</span>
+                </li>
+                <li v-for="c in conversations" :key="c.id" class="tools-item" :class="{ active: c.id === activeConversationId }">
+                  <span class="tool-icon">💬</span>
+                  <span class="tool-name" @click="selectConversation(c.id)">{{ c.title }}</span>
+                  <button class="item-ellipsis" @click.stop="conversationMenuId === c.id ? conversationMenuId=null : conversationMenuId=c.id">⋯</button>
+                  <div class="item-menu" v-if="conversationMenuId === c.id">
+                    <button class="menu-close" @click.stop="conversationMenuId=null">×</button>
+                    <button class="menu-item" @click.stop="renameConversation(c.id)">重命名</button>
+                    <button class="menu-item danger" @click.stop="deleteConversationById(c.id)">删除</button>
+                  </div>
+                </li>
+              </ul>
+            </aside>
+
+            <!-- 右侧：聊天主体 -->
+            <div class="chat-column">
+              <div v-if="!isConfigured" class="tool-panel">
+                尚未配置模型信息，请点击右上角“编辑配置”进行设置。
+              </div>
+
+              <div class="chat-scroll" ref="chatScroll">
+                <div class="chat-list" @click="handleChatClick">
+                  <div v-for="(m,idx) in messages" :key="m.id || idx" class="chat-bubble" :class="m.role === 'user' ? 'user' : 'ai'">
+                    <div class="chat-meta">
+                      <span class="role">{{ m.role === 'user' ? '你' : 'AI' }}</span>
+                      <span class="time">{{ formatRelativeTime(m.createdAt || Date.now()) }}</span>
+                    </div>
+                    <div v-html="renderMessageHtml(m)"></div>
+                    <div style="text-align:right; margin-top:6px;">
+                      <button class="tool-btn ghost" style="padding:2px 6px; font-size:12px;" @click="deleteMessage(m.id)" v-if="m.id">🗑️ 删除</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chat-input-floating">
+                <div class="tool-editor" contenteditable="true" ref="inputArea" data-placeholder="输入你的问题..."
+                  @keydown.enter.exact.prevent="sendMessage"
+                  @input="onInputChange"></div>
+                <div class="input-actions">
+                  <span class="conn-status" :class="connStatus" :title="connStatus"></span>
+                  <button class="btn btn-primary" :disabled="isSending" @click="sendMessage">{{ isSending ? '发送中...' : '发送' }}</button>
+                  <button class="btn btn-secondary" v-if="isSending || canRetry" :disabled="!isSending && !canRetry" @click="isSending ? stopStreaming() : retryLast()">{{ isSending ? '停止' : '重新发送' }}</button>
+                  <button class="btn btn-secondary" @click="clearCurrentConversation" :disabled="isSending">清空会话</button>
+                  <label class="tool-label" style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" v-model="autoScroll"> 自动滚动
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 配置弹窗 -->
+      <div v-if="configModalVisible" class="custom-modal show">
+        <div class="modal-content">
+          <button class="modal-close" @click="closeConfigModal">×</button>
+          <div class="modal-header">
+            <h3 class="modal-title">模型配置</h3>
+          </div>
+          <div class="modal-body">
+            <div class="tool-form">
+              <div class="tool-row column">
+                <label class="tool-label">提供商</label>
+                <select v-model="provider" class="tool-select">
+                  <option v-for="p in providerOptions" :key="p.value" :value="p.value">{{ p.label }}</option>
+                </select>
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">基础地址（OpenAI Chat Completions）</label>
+                <input type="text" v-model="baseUrl" class="tool-input" placeholder="例如：https://api.openai.com/v1/chat/completions">
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">API Key</label>
+                <input type="password" v-model="apiKey" class="tool-input" placeholder="填写你在服务商的密钥">
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">模型名称</label>
+                <input type="text" v-model="model" class="tool-input" placeholder="例如：gpt-4o-mini 或 deepseek-chat">
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">系统提示（可选）</label>
+                <textarea v-model="systemPrompt" rows="3" class="tool-textarea" placeholder="为AI设定角色或上下文"></textarea>
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">Temperature</label>
+                <input type="number" step="0.1" min="0" max="2" v-model.number="temperature" class="tool-input">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="modal-btn secondary" @click="resetToProviderDefaults">重置为提供商默认</button>
+            <button class="modal-btn primary" @click="saveConfig">保存配置</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Vue & Axios -->
+  <script src="/js/vue.global.js"></script>
+  <script src="/js/axios.min.js"></script>
+  <!-- ChatDBService -->
+  <script type="module" src="/js/services/ChatDBService.js"></script>
+  <!-- Highlight.js 脚本 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- Chat App -->
+  <script type="module" src="/js/ai-chat.js"></script>
+</body>
+</html>
