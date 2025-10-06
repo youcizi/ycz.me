@@ -83,6 +83,19 @@
                                     <div class="drop-subtext" style="margin-top:8px;">
                                         当前生效：{{ effectiveApiLabel }}
                                     </div>
+                                    <details style="margin-top:10px;">
+                                        <summary>接口返回格式要求（点击展开）</summary>
+                                        <div style="margin-top:8px;font-size:13px;color:#666;line-height:1.6;">
+                                            <p>后端需返回 JSON，键名需与本站一致：</p>
+                                            <pre style="white-space:pre-wrap;background:#f8f8f8;padding:10px;border-radius:6px;">{
+  "categories": [ { "id": "string", "name": "string", "icon": "string" } ],
+  "websites":   [ { "id": "string", "name": "string", "url": "string", "categoryId": "string" } ],
+  "filters":    [ { "id": "string", "name": "string", "rule": "string" } ],
+  "searchEngines": [ { "id": "string", "name": "string", "queryUrl": "string" } ]
+}</pre>
+                                            <p>说明：无需前端适配，请确保字段与结构严格匹配。</p>
+                                        </div>
+                                    </details>
                                 </div>
                             </div>
                         </div>
@@ -126,6 +139,21 @@
                                         同步地址：{{ effectiveSyncLabel }}
                                         <span v-if="syncSelectedExcel">｜已选文件：{{ syncSelectedExcel.name }}</span>
                                     </div>
+                                    <details style="margin-top:10px;">
+                                        <summary>同步接口要求（点击展开）</summary>
+                                        <div style="margin-top:8px;font-size:13px;color:#666;line-height:1.6;">
+                                            <p>JSON 同步：前端会以 <code>application/json</code> POST 以下结构到同步接口：</p>
+                                            <pre style="white-space:pre-wrap;background:#f8f8f8;padding:10px;border-radius:6px;">{
+  "categories": [...],
+  "websites": [...],
+  "filters": [...],
+  "searchEngines": [...],
+  "timestamp": 1710000000000
+}</pre>
+                                            <p>Excel 上传：以 <code>multipart/form-data</code> 上传，字段名为 <code>file</code>。后端可自行解析，推荐映射为与 JSON 一致的字段。</p>
+                                            <p>说明：无需前端适配，请确保后端按本站格式处理与返回。</p>
+                                        </div>
+                                    </details>
                                 </div>
                             </div>
                         </div>
