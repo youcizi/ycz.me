@@ -535,7 +535,7 @@ body {
 /* 网站展示区域 */
 .websites-section {
   flex: 1;
-  padding: 0;
+  padding: 20px 24px;
   overflow-y: auto;
   background: #f8f8f8;
 }
@@ -1064,7 +1064,7 @@ footer p + p {
   }
   
   .websites-section {
-    padding: 0;
+    padding: 16px 20px;
   }
   
   .websites-grid {
@@ -1439,7 +1439,7 @@ footer p + p {
   }
   
   .websites-section {
-    padding: 0;
+    padding: 12px 16px;
   }
   
   .websites-grid {
@@ -2835,4 +2835,8 @@ footer p + p {
   transform: translateY(-2px) !important;
   box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4) !important;
   background: linear-gradient(135deg, #4338ca, #6d28d9) !important;
+}
+/* 聊天页面专属：移除 websites-section 内边距，避免与全局留白冲突 */
+.ai-chat-page .websites-section {
+  padding: 0;
 }

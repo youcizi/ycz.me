@@ -71,8 +71,8 @@
   opacity: 0;
   transition: opacity 0.2s ease;
 }
-.tools-item:hover .item-ellipsis { opacity: 1; }
-.item-menu {
+.ai-chat-page .tools-item:hover .item-ellipsis { opacity: 1; }
+.ai-chat-page .item-menu {
   position: absolute;
   right: 8px;
   top: 8px;
@@ -88,7 +88,7 @@
   z-index: 20;
   min-width: 120px;
 }
-.menu-close {
+.ai-chat-page .menu-close {
   align-self: flex-end;
   background: transparent;
   border: none;
@@ -97,7 +97,7 @@
   line-height: 1;
   cursor: pointer;
 }
-.menu-item {
+.ai-chat-page .menu-item {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   color: #374151;
@@ -106,13 +106,13 @@
   padding: 6px 10px;
   cursor: pointer;
 }
-.menu-item:hover { background: #f3f4f6; }
-.menu-item.danger { color: #ef4444; border-color: #fca5a5; }
+.ai-chat-page .menu-item:hover { background: #f3f4f6; }
+.ai-chat-page .menu-item.danger { color: #ef4444; border-color: #fca5a5; }
 
 /* 右侧聊天列布局与底部固定 */
-.chat-column { display: flex; flex-direction: column; max-height: calc(100vh - 66px); position: relative; padding: 16px 16px 160px; }
-.chat-scroll { flex: 1; overflow: auto; }
-.chat-input-floating {
+.ai-chat-page .chat-column { display: flex; flex-direction: column; max-height: calc(100vh - 66px); position: relative; padding: 16px 16px 160px; }
+.ai-chat-page .chat-scroll { flex: 1; overflow: auto; }
+.ai-chat-page .chat-input-floating {
   position: absolute;
   left: 0;
   right: 0;
@@ -124,9 +124,9 @@
   border-top-right-radius: 10px;
   box-shadow: 0 -6px 18px rgba(0,0,0,0.08);
 }
-.chat-input-floating .input-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.ai-chat-page .chat-input-floating .input-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 
-.tools-content {
+.ai-chat-page .tools-content {
   background: #ffffff;
   border: none;
   border-radius: 0;
@@ -144,14 +144,14 @@
 }
 
 /* 侧栏：新建会话采用与首页添加分类一致的风格 */
-.tools-item.add-conv {
+.ai-chat-page .tools-item.add-conv {
   border: 2px dashed var(--border-color, #e5e7eb);
   background: transparent;
   color: var(--text-secondary, #4b5563);
   justify-content: center;
   margin: 8px 8px 6px;
 }
-.tools-item.add-conv:hover {
+.ai-chat-page .tools-item.add-conv:hover {
   border-color: var(--primary-color, #4a90e2);
   color: var(--primary-color, #4a90e2);
   background: rgba(74, 144, 226, 0.05);
