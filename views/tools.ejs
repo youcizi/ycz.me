@@ -159,6 +159,51 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- JSON 格式化与校验 -->
+                    <div v-else-if="currentToolId === 'json'" class="tool-panel">
+                      <div class="tool-form" aria-label="JSON 格式化与校验">
+                        <div class="tool-row column">
+                          <label class="tool-label">输入 JSON</label>
+                          <textarea class="tool-textarea" rows="10" placeholder="粘贴或输入 JSON 文本" v-model="jsonInput"></textarea>
+                        </div>
+                        <div class="tool-actions">
+                          <button class="tool-btn primary" @click="jsonFormat">格式化</button>
+                          <button class="tool-btn" @click="jsonValidate">校验</button>
+                          <button class="tool-btn ghost" @click="clearJson">清空</button>
+                        </div>
+                        <div class="tool-row column">
+                          <label class="tool-label">输出结果</label>
+                          <textarea class="tool-textarea" rows="10" readonly v-model="jsonOutput"></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- JS/CSS 格式化与压缩 -->
+                    <div v-else-if="currentToolId === 'code'" class="tool-panel">
+                      <div class="tool-form" aria-label="JS/CSS 格式化与压缩">
+                        <div class="tool-row">
+                          <label class="tool-label">类型</label>
+                          <select class="tool-select" v-model="codeType">
+                            <option value="javascript">JavaScript</option>
+                            <option value="css">CSS</option>
+                          </select>
+                        </div>
+                        <div class="tool-row column">
+                          <label class="tool-label">输入代码</label>
+                          <textarea class="tool-textarea" rows="10" placeholder="在此输入 JS 或 CSS 代码" v-model="codeInput"></textarea>
+                        </div>
+                        <div class="tool-actions">
+                          <button class="tool-btn primary" @click="codeFormat">格式化</button>
+                          <button class="tool-btn" @click="codeMinify">压缩</button>
+                          <button class="tool-btn ghost" @click="clearCode">清空</button>
+                        </div>
+                        <div class="tool-row column">
+                          <label class="tool-label">输出结果</label>
+                          <textarea class="tool-textarea" rows="10" readonly v-model="codeOutput"></textarea>
+                        </div>
+                      </div>
+                    </div>
                     <div v-else class="tool-panel">
                         <p class="placeholder">请选择左侧工具查看具体内容。</p>
                     </div>
@@ -171,6 +216,14 @@
     <script src="/js/vue.global.js"></script>
     <!-- 农历工具 -->
     <script src="/js/utils/lunar.js"></script>
+    <!-- 通用弹窗组件 -->
+    <script src="/js/CustomModal.js"></script>
+    <!-- 代码格式化/压缩依赖：Prettier/Terser/CSSO -->
+    <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/standalone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-babel.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prettier@2.8.8/parser-postcss.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/terser@5.19.2/dist/bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/csso@5.0.5/dist/csso.min.js"></script>
     <!-- 工具页应用脚本 -->
     <script src="/js/tools-app.js"></script>
     <!-- 首次访问弹窗与公告挂件 -->

@@ -213,7 +213,6 @@
   color: #374151;
   font-size: 13px;
   outline: none;
-  transition: all 0.2s ease;
 }
 .tool-textarea:focus {
   border-color: #3b82f6;

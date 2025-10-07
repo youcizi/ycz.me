@@ -7,7 +7,9 @@ const ToolsApp = {
       tools: [
         { id: 'timestamp', name: '时间戳转换', icon: '⏱' },
         { id: 'base64', name: 'Base64 编解码', icon: '🔤' },
-        { id: 'url', name: 'URL 编解码', icon: '🔗' }
+        { id: 'url', name: 'URL 编解码', icon: '🔗' },
+        { id: 'json', name: 'JSON 格式化与校验', icon: '🧾' },
+        { id: 'code', name: 'JS/CSS 格式化与压缩', icon: '🛠️' }
       ],
       currentToolId: 'timestamp',
       // 时间戳转换
@@ -23,6 +25,13 @@ const ToolsApp = {
       // URL
       urlInput: '',
       urlOutput: '',
+      // JSON
+      jsonInput: '',
+      jsonOutput: '',
+      // 代码（JS/CSS）
+      codeType: 'javascript', // javascript | css
+      codeInput: '',
+      codeOutput: '',
       // 日历相关
       calendarVisible: false,
       viewYear: new Date().getFullYear(),
@@ -160,6 +169,105 @@ const ToolsApp = {
       }
     },
     clearUrl() { this.urlInput = ''; this.urlOutput = ''; },
+    // JSON 工具
+    jsonFormat() {
+      const raw = this.jsonInput || '';
+      if (!raw.trim()) { this.jsonOutput = ''; return; }
+      try {
+        const obj = JSON.parse(raw);
+        this.jsonOutput = JSON.stringify(obj, null, 2);
+        if (window.CustomModal && typeof window.CustomModal.showSuccess === 'function') {
+          window.CustomModal.showSuccess('JSON 已格式化并通过校验');
+        }
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        this.jsonOutput = `JSON 解析错误：${msg}`;
+        if (window.CustomModal && typeof window.CustomModal.showError === 'function') {
+          window.CustomModal.showError(`JSON 解析失败：${msg}`);
+        }
+      }
+    },
+    jsonValidate() {
+      const raw = this.jsonInput || '';
+      if (!raw.trim()) { this.jsonOutput = ''; return; }
+      try {
+        JSON.parse(raw);
+        this.jsonOutput = '校验通过：JSON 结构有效';
+        if (window.CustomModal && typeof window.CustomModal.showSuccess === 'function') {
+          window.CustomModal.showSuccess('JSON 校验通过');
+        }
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        this.jsonOutput = `校验失败：${msg}`;
+        if (window.CustomModal && typeof window.CustomModal.showError === 'function') {
+          window.CustomModal.showError(`JSON 校验失败：${msg}`);
+        }
+      }
+    },
+    clearJson() { this.jsonInput = ''; this.jsonOutput = ''; },
+    // JS/CSS 工具
+    codeFormat() {
+      const src = this.codeInput || '';
+      if (!src.trim()) { this.codeOutput = ''; return; }
+      const lang = this.codeType;
+      try {
+        if (typeof window.prettier === 'undefined' || typeof window.prettier.format !== 'function') {
+          throw new Error('未加载格式化库（Prettier）');
+        }
+        const plugins = window.prettierPlugins || {};
+        let parser = 'babel';
+        let pluginList = [];
+        if (lang === 'javascript') {
+          parser = 'babel';
+          pluginList = plugins.babel ? [plugins.babel] : (Array.isArray(plugins) ? plugins : []);
+        } else if (lang === 'css') {
+          parser = 'css';
+          pluginList = plugins.postcss ? [plugins.postcss] : (Array.isArray(plugins) ? plugins : []);
+        }
+        const out = window.prettier.format(src, { parser, plugins: pluginList, tabWidth: 2, singleQuote: true });
+        this.codeOutput = out;
+        if (window.CustomModal && typeof window.CustomModal.showSuccess === 'function') {
+          window.CustomModal.showSuccess(`${lang.toUpperCase()} 已格式化`);
+        }
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        this.codeOutput = `格式化失败：${msg}`;
+        if (window.CustomModal && typeof window.CustomModal.showError === 'function') {
+          window.CustomModal.showError(`格式化失败：${msg}`);
+        }
+      }
+    },
+    async codeMinify() {
+      const src = this.codeInput || '';
+      if (!src.trim()) { this.codeOutput = ''; return; }
+      const lang = this.codeType;
+      try {
+        if (lang === 'javascript') {
+          if (!window.Terser || typeof window.Terser.minify !== 'function') {
+            throw new Error('未加载压缩库（Terser）');
+          }
+          const result = await window.Terser.minify(src, { compress: true, mangle: true });
+          if (result.error) throw result.error;
+          this.codeOutput = result.code || '';
+        } else if (lang === 'css') {
+          if (!window.csso || typeof window.csso.minify !== 'function') {
+            throw new Error('未加载压缩库（CSSO）');
+          }
+          const result = window.csso.minify(src);
+          this.codeOutput = (result && result.css) ? result.css : '';
+        }
+        if (window.CustomModal && typeof window.CustomModal.showSuccess === 'function') {
+          window.CustomModal.showSuccess(`${lang.toUpperCase()} 已压缩`);
+        }
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        this.codeOutput = `压缩失败：${msg}`;
+        if (window.CustomModal && typeof window.CustomModal.showError === 'function') {
+          window.CustomModal.showError(`压缩失败：${msg}`);
+        }
+      }
+    },
+    clearCode() { this.codeInput = ''; this.codeOutput = ''; },
     // 日历相关
     showCalendar() { this.calendarVisible = true; this.weatherVisible = false; },
     hideCalendar() { this.calendarVisible = false; this.ymPickerVisible = false; },

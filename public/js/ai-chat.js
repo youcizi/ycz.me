@@ -104,7 +104,7 @@ const AiChatApp = {
             t.textContent = '已复制';
             setTimeout(() => { t.textContent = '复制'; }, 1500);
           }).catch(() => {
-            alert('复制失败，请手动选择文本复制');
+            try { CustomModal.showError('复制失败，请手动选择文本复制'); } catch (_) { /* fallback ignored */ }
           });
         }
       }
@@ -187,7 +187,7 @@ const AiChatApp = {
       localStorage.setItem(STORAGE.model, (this.model || '').trim());
       localStorage.setItem(STORAGE.systemPrompt, this.systemPrompt || '');
       localStorage.setItem(STORAGE.temperature, String(this.temperature ?? 0.7));
-      alert('配置已保存');
+      try { CustomModal.showSuccess('配置已保存'); } catch (_) { /* fallback ignored */ }
       this.closeConfigModal();
     },
 
@@ -222,7 +222,7 @@ const AiChatApp = {
       const content = (this.inputText || '').trim();
       if (!content) return;
       if (!this.isConfigured) {
-        alert('请先完成模型配置：基础地址、API Key、模型名称');
+        try { CustomModal.showWarning('请先完成模型配置：基础地址、API Key、模型名称'); } catch (_) { /* fallback ignored */ }
         this.openConfigModal();
         return;
       }
@@ -465,7 +465,7 @@ const AiChatApp = {
             setTimeout(() => { el.textContent = prev && prev.includes('复制') ? '📋 复制' : '复制'; }, 1500);
           }
         } catch (err2) {
-          alert('复制失败，请手动选择文本复制');
+          try { CustomModal.showError('复制失败，请手动选择文本复制'); } catch (_) { /* fallback ignored */ }
         }
       }
     },
