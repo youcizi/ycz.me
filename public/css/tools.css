@@ -221,11 +221,11 @@
 }
 .tool-editor {
   width: 100%;
-  min-height: 34px;
+  min-height: 44px;  
   padding: 10px 12px;
   background: #ffffff;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 50px;
   color: #374151;
   font-size: 13px;
   outline: none;

@@ -53,9 +53,7 @@
                                     <div class="day-lunar">{{ d.lunar }}</div>
                                 </div>
                             </div>
-                            <div class="calendar-footer">
-                                <button class="cal-btn" @click.stop="gotoToday">今天</button>
-                            </div>
+                            
                             
                         </div>
                         <div v-if="weatherVisible" class="weather-dropdown" @mouseenter="showWeather" @mouseleave="hideWeather">
@@ -175,5 +173,7 @@
     <script src="/js/utils/lunar.js"></script>
     <!-- 工具页应用脚本 -->
     <script src="/js/tools-app.js"></script>
+    <!-- 首次访问弹窗与公告挂件 -->
+    <script type="module" src="/js/first-visit.js"></script>
 </body>
 </html>
