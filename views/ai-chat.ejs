@@ -70,7 +70,8 @@
                     </div>
                     <div v-html="renderMessageHtml(m)"></div>
                     <div style="text-align:right; margin-top:6px;">
-                      <button class="tool-btn ghost" style="padding:2px 6px; font-size:12px;" @click="deleteMessage(m.id)" v-if="m.id">🗑️ 删除</button>
+                      <button class="tool-btn ghost" style="padding:2px 6px; font-size:12px; margin-right:6px;" @click="copyMessage(m.id, $event)" v-if="m.id" title="复制该消息">📋 复制</button>
+                      <button class="tool-btn ghost" style="padding:2px 6px; font-size:12px;" @click="deleteMessage(m.id)" v-if="m.id" title="删除该消息">🗑️ 删除</button>
                     </div>
                   </div>
                 </div>

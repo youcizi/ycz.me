@@ -235,7 +235,16 @@ const AiChatApp = {
         const conv = this.conversations.find(c => c.id === this.activeConversationId);
         if (conv) { conv.updatedAt = Date.now(); await ChatDBService.updateConversation(conv); }
       }
+      // 清空输入区（contenteditable）与内部绑定文本
       this.inputText = '';
+      const inputEl = this.$refs.inputArea;
+      if (inputEl) {
+        inputEl.innerText = '';
+        inputEl.innerHTML = '';
+        const ev = new Event('input', { bubbles: true });
+        inputEl.dispatchEvent(ev);
+        inputEl.style.height = 'auto';
+      }
       this.$nextTick(() => { this.onInputChange(); this.scrollToBottom(); this.highlightCodes(); });
       this.isSending = true;
       this.connStatus = 'connecting';
@@ -350,8 +359,12 @@ const AiChatApp = {
           if (conv) { conv.updatedAt = Date.now(); await ChatDBService.updateConversation(conv); }
         }
       } catch (e) {
-        console.error('发送失败', e);
         const aborted = (e && (e.name === 'AbortError' || e.message?.includes('abort')));
+        if (aborted) {
+          console.info('回复已中断', e);
+        } else {
+          console.error('发送失败', e);
+        }
         if (aborted) {
           this.messages.push({ role: 'assistant', content: '提示：回复已被手动中断' });
           this.connStatus = 'stopped';
@@ -421,6 +434,40 @@ const AiChatApp = {
         await ChatDBService.deleteMessage(id);
         this.messages = this.messages.filter(m => m.id !== id);
       } catch (e) { console.warn('删除消息失败', e); }
+    },
+    async copyMessage(id, evt) {
+      try {
+        const msg = this.messages.find(m => m.id === id);
+        const text = (msg && msg.content) ? String(msg.content) : '';
+        if (!text) return;
+        await navigator.clipboard.writeText(text);
+        if (evt && evt.target) {
+          const el = evt.target;
+          const prev = el.textContent;
+          el.textContent = '已复制';
+          setTimeout(() => { el.textContent = prev && prev.includes('复制') ? '📋 复制' : '复制'; }, 1500);
+        }
+      } catch (e) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = (this.messages.find(m => m.id === id)?.content) || '';
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (evt && evt.target) {
+            const el = evt.target;
+            const prev = el.textContent;
+            el.textContent = '已复制';
+            setTimeout(() => { el.textContent = prev && prev.includes('复制') ? '📋 复制' : '复制'; }, 1500);
+          }
+        } catch (err2) {
+          alert('复制失败，请手动选择文本复制');
+        }
+      }
     },
     startRename() {
       if (!this.activeConversationId) return;
