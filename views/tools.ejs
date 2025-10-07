@@ -68,9 +68,9 @@
             </div>
 
             <!-- 工具页主体：上下结构中的下半部分采用左右布局 -->
-            <section class="tools-main" aria-label="在线工具">
+            <section class="tools-main" aria-label="在线工具" style="height: 100%; padding: 0;">
                 <!-- 左：工具列表 -->
-                <aside class="tools-sidebar">
+                <aside class="tools-sidebar" style="padding: 20px 15px;">
                     <div class="tools-title">工具列表</div>
                     <ul class="tools-list">
                         <li v-for="tool in tools" :key="tool.id"
@@ -84,7 +84,7 @@
                 </aside>
 
                 <!-- 右：具体工具内容 -->
-                <div class="tools-content">
+                <div class="tools-content" style="padding: 20px 20px 20px 0;">
                     <div class="content-header-row">
                         <h2 class="content-title">{{ currentToolName }}</h2>
                     </div>
