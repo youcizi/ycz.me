@@ -230,7 +230,10 @@
   font-size: 13px;
   outline: none;
   transition: all 0.2s ease;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 200px;
+  -webkit-overflow-scrolling: touch;
   line-height: 1.6;
   white-space: pre-wrap;
 }
