@@ -543,3 +543,26 @@
 .ai-chat-page .chat-list table { max-width: 100%; display: block; overflow-x: auto; }
 .ai-chat-page .chat-list img { max-width: 100%; height: auto; }
 .ai-chat-page .conn-status.streaming { cursor: pointer; }
+
+/* 移动端适配（不影响PC端） */
+@media (max-width: 768px) {
+  /* 两列改为单列栈叠 */
+  .ai-chat-page .tool-layout-two-cols { grid-template-columns: 1fr; }
+  .ai-chat-page .tools-sidebar { border-right: none; border-bottom: 1px solid #e5e7eb; }
+  .ai-chat-page .tools-item { padding: 10px 12px; }
+
+  /* 聊天区域与输入栏 */
+  .ai-chat-page .chat-column { max-height: none; padding: 12px 12px 220px; }
+  .ai-chat-page .chat-scroll { max-height: calc(100vh - 220px); }
+  .ai-chat-page .chat-input-floating {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    border-top-left-radius: 0; border-top-right-radius: 0;
+    padding: 12px;
+    z-index: 1000;
+  }
+  .ai-chat-page .chat-input-floating .input-actions { flex-wrap: wrap; }
+
+  /* 顶栏操作区在小屏换行，避免溢出 */
+  .ai-chat-page .top-actions { flex-wrap: wrap; gap: 8px; }
+}

@@ -14,7 +14,7 @@ const STORAGE = {
 const PROVIDERS = {
   openai: { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini' },
   deepseek: { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' },
-  tongyi: { label: '通义千问（DashScope兼容）', baseUrl: 'https://dashscope.aliyuncs.com/v1/chat/completions', model: 'qwen-turbo' },
+  tongyi: { label: '通义千问（DashScope兼容）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: 'qwen-plus' },
   doubao: { label: '豆包（Volc Ark兼容）', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model: 'ep-4o-mini' },
   siliconflow: { label: 'SiliconFlow', baseUrl: 'https://api.siliconflow.cn/v1/chat/completions', model: 'qwen2.5-7b-instruct' },
   custom: { label: '自定义', baseUrl: '', model: '' }
@@ -91,21 +91,14 @@ const AiChatApp = {
       try {
         const list = await ChatDBService.listModelConfigs();
         if (!list || list.length === 0) {
-          // 从现有本地存储迁移默认配置
-          const cfg = await ChatDBService.addModelConfig({
-            name: '默认',
-            provider: this.provider,
-            baseUrl: this.baseUrl,
-            apiKey: this.apiKey,
-            model: this.model,
-            systemPrompt: this.systemPrompt,
-            temperature: this.temperature,
-            streamTimeoutSec: this.streamTimeoutSec
-          });
-          this.modelConfigs = [cfg];
-          this.selectedConfigId = cfg.id;
-          this.configName = cfg.name;
-          localStorage.setItem('aiChat.currentConfigId', String(cfg.id));
+          // 不再自动创建默认配置，改为提示并引导用户添加
+          this.modelConfigs = [];
+          this.selectedConfigId = null;
+          this.configName = '';
+          localStorage.removeItem('aiChat.currentConfigId');
+          try { CustomModal.showWarning('暂无模型配置，请先添加配置'); } catch (_) {}
+          // 自动打开添加配置弹窗，提高可用性
+          this.openAddConfigModal();
         } else {
           this.modelConfigs = list;
           const currentId = localStorage.getItem('aiChat.currentConfigId');

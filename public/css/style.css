@@ -2844,6 +2844,11 @@ footer p + p {
 .ai-chat-page .websites-section {
   padding: 0;
 }
+/* 移动端适配：优化通用弹窗布局与按钮换行（不影响PC端） */
+@media (max-width: 768px) {
+  .custom-modal .modal-content { width: 95%; max-height: 80vh; }
+  .custom-modal .modal-footer { flex-wrap: wrap; }
+}
 /* 首次访问弹窗与公告挂件（隔离前缀：first-visit / announcement） */
 .first-visit-modal {
   position: fixed;
