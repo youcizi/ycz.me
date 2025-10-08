@@ -34,4 +34,7 @@ router.get('/api/website/:name', apiController.getWebsiteByName.bind(apiControll
 router.put('/api/websites/:name', apiController.updateWebsite.bind(apiController));
 router.delete('/api/websites/:name', apiController.deleteWebsite.bind(apiController));
 
+// AI聊天代理（服务端转发，避免浏览器跨域）
+router.post('/api/ai/proxy', apiController.proxyChatCompletions.bind(apiController));
+
 module.exports = router;

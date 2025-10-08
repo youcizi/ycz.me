@@ -516,3 +516,18 @@
   color: #9ca3af;
   font-size: 12px;
 }
+
+/* 仅作用于聊天页面：强制换行与限制溢出，避免代码块撑开页面 */
+.ai-chat-page .chat-column { overflow: hidden; }
+.ai-chat-page .chat-list { word-break: break-word; overflow-wrap: anywhere; }
+.ai-chat-page .chat-list pre,
+.ai-chat-page .chat-list code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+.ai-chat-page .chat-list table { max-width: 100%; display: block; overflow-x: auto; }
+.ai-chat-page .chat-list img { max-width: 100%; height: auto; }
+.ai-chat-page .conn-status.streaming { cursor: pointer; }

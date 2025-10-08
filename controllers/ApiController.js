@@ -229,6 +229,84 @@ class ApiController {
       ctx.body = { success: false, message: '服务器内部错误' };
     }
   }
+
+  /**
+   * AI聊天代理：服务端转发到目标 Chat Completions 接口，避免浏览器CORS。
+   * 请求体：{ url: string, apiKey?: string, provider?: string, payload: { model, messages, temperature, stream } }
+   */
+  async proxyChatCompletions(ctx) {
+    try {
+      const { url, apiKey, provider, payload } = ctx.request.body || {};
+      if (!url || !payload || typeof payload !== 'object') {
+        ctx.status = 400;
+        ctx.body = { success: false, message: '参数错误：缺少 url 或 payload' };
+        return;
+      }
+
+      const targetUrl = String(url);
+      if (!/^https?:\/\//i.test(targetUrl)) {
+        ctx.status = 400;
+        ctx.body = { success: false, message: '非法目标地址：仅支持 http/https' };
+        return;
+      }
+
+      const isStream = !!payload?.stream;
+      const headers = { 'Content-Type': 'application/json' };
+      const key = (apiKey || '').trim();
+      if (key) {
+        headers['Authorization'] = `Bearer ${key}`;
+        headers['X-API-Key'] = key;
+      }
+      if (isStream) {
+        headers['Accept'] = 'text/event-stream';
+      }
+
+      const body = JSON.stringify(payload);
+      const resp = await fetch(targetUrl, { method: 'POST', headers, body });
+      const contentType = (resp.headers.get('content-type') || '').toLowerCase();
+
+      // 流式SSE转发
+      if (isStream && contentType.includes('text/event-stream') && resp.body) {
+        ctx.respond = false; // 直接控制原始响应
+        ctx.res.statusCode = 200;
+        ctx.res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        ctx.res.setHeader('Cache-Control', 'no-cache');
+        ctx.res.setHeader('Connection', 'keep-alive');
+        ctx.res.flushHeaders?.();
+
+        const reader = resp.body.getReader();
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value && value.length) {
+              // 直接转发上游SSE字节
+              ctx.res.write(Buffer.from(value));
+            }
+          }
+        } catch (streamErr) {
+          // 流中断时，发送一个错误事件（部分前端可能显示为重试流式失败）
+          try {
+            ctx.res.write(`event: error\ndata: ${JSON.stringify({ message: streamErr?.message || 'SSE代理中断' })}\n\n`);
+          } catch (_) {}
+        } finally {
+          ctx.res.end();
+        }
+        return; // 已完成原始响应
+      }
+
+      // 非流式或上游未返回SSE：以JSON一次性返回
+      const text = await resp.text();
+      let data;
+      try { data = JSON.parse(text); } catch (_) { data = { output_text: text }; }
+      ctx.status = resp.status;
+      ctx.body = data;
+    } catch (error) {
+      console.error('AI代理请求失败:', error);
+      ctx.status = 500;
+      ctx.body = { error: { message: error?.message || '服务器内部错误' } };
+    }
+  }
 }
 
 module.exports = ApiController;

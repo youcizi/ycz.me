@@ -82,8 +82,8 @@
                   @keydown.enter.exact.prevent="sendMessage"
                   @input="onInputChange"></div>
                 <div class="input-actions">
-                  <span class="conn-status" :class="connStatus" :title="connStatus"></span>
-                  <button class="btn btn-primary" :disabled="isSending" @click="sendMessage">{{ isSending ? '发送中...' : '发送' }}</button>
+                  <span class="conn-status" :class="connStatus" :title="connStatus" @click="isSending ? stopStreaming() : null"></span>
+                  <button class="btn btn-primary" @click="isSending ? stopStreaming() : sendMessage()">{{ isSending ? '停止' : '发送' }}</button>
                   <button class="btn btn-secondary" v-if="isSending || canRetry" :disabled="!isSending && !canRetry" @click="isSending ? stopStreaming() : retryLast()">{{ isSending ? '停止' : '重新发送' }}</button>
                   <button class="btn btn-secondary" @click="clearCurrentConversation" :disabled="isSending">清空会话</button>
                   <label class="tool-label" style="margin-left:auto; display:flex; align-items:center; gap:6px;">
@@ -130,6 +130,11 @@
               <div class="tool-row column">
                 <label class="tool-label">Temperature</label>
                 <input type="number" step="0.1" min="0" max="2" v-model.number="temperature" class="tool-input">
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">回复超时（秒）</label>
+                <input type="number" min="5" max="600" v-model.number="streamTimeoutSec" class="tool-input" placeholder="例如：30">
+                <p class="tool-hint">根据不同服务商设定默认值，支持自定义；流式超过该时间将自动中断。</p>
               </div>
             </div>
           </div>

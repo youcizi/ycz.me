@@ -43,6 +43,7 @@ const AiChatApp = {
       , editingTitle: false,
       titleDraft: '',
       conversationMenuId: null
+      , _timedOut: false
     };
   },
   mounted() {
@@ -73,6 +74,39 @@ const AiChatApp = {
   },
 
   methods: {
+    // 基于当前会话消息生成自动标题（优先首条用户消息）
+    generateAutoTitle() {
+      const msgs = this.messages || [];
+      let text = '';
+      for (const m of msgs) {
+        if (m.role === 'user' && (m.content || '').trim()) { text = m.content; break; }
+      }
+      if (!text) {
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const m = msgs[i];
+          if (m.role === 'user' && (m.content || '').trim()) { text = m.content; break; }
+        }
+      }
+      text = (text || '').trim();
+      if (!text) return '会话';
+      // 去除代码块与行内代码
+      text = text.replace(/```[\s\S]*?```/g, '').replace(/`[^`]*`/g, '');
+      // 去除Markdown标题符号
+      text = text.replace(/^#{1,6}\s*/gm, '');
+      // 取第一行
+      text = text.split(/\r?\n/)[0].trim();
+      // 去除常见中文客套/虚词开头
+      text = text.replace(/^(请帮我|请问|如何|怎么|能否|麻烦)/, '');
+      // 去除尾部标点与空白
+      text = text.replace(/[。？！,.!?、；;:\s]+$/,'');
+      const isAscii = /^[\x00-\x7F]+$/.test(text);
+      if (isAscii) {
+        const words = text.split(/\s+/).filter(Boolean).slice(0, 6);
+        return words.join(' ');
+      } else {
+        return text.slice(0, 12);
+      }
+    },
     async initConversations() {
       try {
         const list = await ChatDBService.listConversations();
@@ -116,6 +150,8 @@ const AiChatApp = {
       const next = prompt('输入新的会话标题', current);
       if (next && next.trim()) {
         conv.title = next.trim();
+        // 标记用户已手动重命名，后续不再自动修改
+        conv.userRenamed = true;
         conv.updatedAt = Date.now();
         await ChatDBService.updateConversation(conv);
         this.conversations = await ChatDBService.listConversations();
@@ -187,6 +223,7 @@ const AiChatApp = {
       localStorage.setItem(STORAGE.model, (this.model || '').trim());
       localStorage.setItem(STORAGE.systemPrompt, this.systemPrompt || '');
       localStorage.setItem(STORAGE.temperature, String(this.temperature ?? 0.7));
+      localStorage.setItem(STORAGE.timeoutMs, String(this.streamTimeoutMs || 30000));
       try { CustomModal.showSuccess('配置已保存'); } catch (_) { /* fallback ignored */ }
       this.closeConfigModal();
     },
@@ -222,7 +259,7 @@ const AiChatApp = {
       const content = (this.inputText || '').trim();
       if (!content) return;
       if (!this.isConfigured) {
-        try { CustomModal.showWarning('请先完成模型配置：基础地址、API Key、模型名称'); } catch (_) { /* fallback ignored */ }
+        try { CustomModal.showWarning('请先完成模型配置：基础地址与模型名称'); } catch (_) { /* fallback ignored */ }
         this.openConfigModal();
         return;
       }
@@ -247,52 +284,47 @@ const AiChatApp = {
       }
       this.$nextTick(() => { this.onInputChange(); this.scrollToBottom(); this.highlightCodes(); });
       this.isSending = true;
+      this._userStopped = false;
       this.connStatus = 'connecting';
       this.canRetry = false;
       this.lastPrompt = content;
-      try {
-        // 构造消息体（OpenAI兼容）
-        const msgs = [];
-        if (this.systemPrompt && this.systemPrompt.trim()) {
-          msgs.push({ role: 'system', content: this.systemPrompt.trim() });
-        }
-        msgs.push(...this.messages.map(m => ({ role: m.role, content: m.content })));
+      // 构造消息体（OpenAI兼容）——提前到函数作用域，确保在 catch/retry 中也可用
+      const msgs = [];
+      if (this.systemPrompt && this.systemPrompt.trim()) {
+        msgs.push({ role: 'system', content: this.systemPrompt.trim() });
+      }
+      msgs.push(...this.messages.map(m => ({ role: m.role, content: m.content })));
 
-        const payload = {
-          model: this.model,
-          messages: msgs,
-          temperature: this.temperature,
-          stream: true
-        };
+      const payload = {
+        model: this.model,
+        messages: msgs,
+        temperature: this.temperature,
+        stream: true
+      };
+
+      try {
         // 先创建一个占位的助手消息用于流式追加
         const aiIndex = this.messages.length;
         const aiNow = Date.now();
         const aiMsgId = 'm_' + aiNow + '_a';
         this.messages.push({ id: aiMsgId, role: 'assistant', content: '', createdAt: aiNow });
 
-        // 使用 fetch 读取 SSE 流（带超时与中断）
+        // 使用服务端代理避免CORS问题：首次尝试（将返回JSON，触发回退逻辑）
         this._abortController = new AbortController();
-        const resp = await fetch(this.baseUrl, {
+        const headers = { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' };
+        const resp = await fetch('/api/ai/proxy', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Accept': 'text/event-stream'
-          },
-          body: JSON.stringify(payload),
+          headers,
+          body: JSON.stringify({ url: this.baseUrl, apiKey: this.apiKey, provider: this.provider, payload }),
           signal: this._abortController.signal
         });
 
         const ct = resp.headers.get('content-type') || '';
         const isSSE = ct.includes('text/event-stream');
         if (!resp.ok || !resp.body || !isSSE) {
-          // 失败则回退到一次性响应
-          const res = await axios.post(this.baseUrl, { ...payload, stream: false }, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`
-            }
-          });
+          // 失败则回退到一次性响应（仍通过服务端代理）
+          const axiosHeaders = { 'Content-Type': 'application/json' };
+          const res = await axios.post('/api/ai/proxy', { url: this.baseUrl, apiKey: this.apiKey, provider: this.provider, payload: { ...payload, stream: false } }, { headers: axiosHeaders });
           const choice = res?.data?.choices?.[0];
           const aiMsg = choice?.message?.content || choice?.delta?.content || res?.data?.output_text || '[无内容]';
           this.messages[aiIndex].content = aiMsg;
@@ -307,6 +339,7 @@ const AiChatApp = {
           const timeoutMs = 30000;
           const timeoutId = setTimeout(() => {
             timedOut = true;
+            this._timedOut = true;
             try { this._abortController.abort(); } catch (_) {}
           }, timeoutMs);
           while (true) {
@@ -352,12 +385,24 @@ const AiChatApp = {
         }
 
         // 保存 AI 消息
-        const finalContent = this.messages[aiIndex].content || '[无内容]';
-        if (this.activeConversationId) {
-          await ChatDBService.addMessage({ id: this.messages[aiIndex].id, conversationId: this.activeConversationId, role: 'assistant', content: finalContent, createdAt: Date.now() });
-          const conv = this.conversations.find(c => c.id === this.activeConversationId);
-          if (conv) { conv.updatedAt = Date.now(); await ChatDBService.updateConversation(conv); }
+      const finalContent = this.messages[aiIndex].content || '[无内容]';
+      if (this.activeConversationId) {
+        await ChatDBService.addMessage({ id: this.messages[aiIndex].id, conversationId: this.activeConversationId, role: 'assistant', content: finalContent, createdAt: Date.now() });
+        const conv = this.conversations.find(c => c.id === this.activeConversationId);
+        if (conv) {
+          conv.updatedAt = Date.now();
+          // 自动重命名：仅当标题仍为默认且未被用户手动改名
+          if (!conv.userRenamed && (!conv.title || conv.title === '新会话')) {
+            const autoTitle = this.generateAutoTitle();
+            if (autoTitle && autoTitle.trim()) {
+              conv.title = autoTitle.trim();
+            }
+          }
+          await ChatDBService.updateConversation(conv);
+          // 刷新列表以反映可能的标题变化
+          this.conversations = await ChatDBService.listConversations();
         }
+      }
       } catch (e) {
         const aborted = (e && (e.name === 'AbortError' || e.message?.includes('abort')));
         if (aborted) {
@@ -366,16 +411,25 @@ const AiChatApp = {
           console.error('发送失败', e);
         }
         if (aborted) {
-          this.messages.push({ role: 'assistant', content: '提示：回复已被手动中断' });
-          this.connStatus = 'stopped';
+          if (this._userStopped) {
+            this.messages.push({ role: 'assistant', content: '提示：回复已被手动中断' });
+            this.connStatus = 'stopped';
+          } else if (this._timedOut) {
+            this.messages.push({ role: 'assistant', content: '提示：流式已超时，连接已中断' });
+            this.connStatus = 'stopped';
+          } else {
+            this.messages.push({ role: 'assistant', content: '提示：回复已中断（可能达到最大Token、网络问题或服务端结束）' });
+            this.connStatus = 'stopped';
+          }
           this.canRetry = true;
         } else {
           // 重试一次流式（若仍失败则提示错误并回退）
           try {
             const retryPayload = { ...payload };
             const retryController = new AbortController();
-            const retryResp = await fetch(this.baseUrl, {
-              method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}`, 'Accept': 'text/event-stream' }, body: JSON.stringify(retryPayload), signal: retryController.signal
+            const retryHeaders = { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' };
+            const retryResp = await fetch('/api/ai/proxy', {
+              method: 'POST', headers: retryHeaders, body: JSON.stringify({ url: this.baseUrl, apiKey: this.apiKey, provider: this.provider, payload: retryPayload }), signal: retryController.signal
             });
             const retryCt = retryResp.headers.get('content-type') || '';
             const retryIsSSE = retryCt.includes('text/event-stream');
@@ -426,6 +480,8 @@ const AiChatApp = {
         this.isSending = false;
         this.$nextTick(() => { this.scrollToBottom(); this.highlightCodes(); });
         this._abortController = null;
+        this._userStopped = false;
+        this._timedOut = false;
       }
     },
     async deleteMessage(id) {
@@ -481,6 +537,8 @@ const AiChatApp = {
       if (!title) { this.editingTitle = false; return; }
       const conv = this.conversations.find(c => c.id === this.activeConversationId);
       conv.title = title;
+      // 标记用户已手动重命名，后续不再自动修改
+      conv.userRenamed = true;
       conv.updatedAt = Date.now();
       await ChatDBService.updateConversation(conv);
       this.conversations = await ChatDBService.listConversations();
@@ -504,6 +562,7 @@ const AiChatApp = {
     },
     stopStreaming() {
       if (this._abortController) {
+        this._userStopped = true;
         this._abortController.abort();
       }
       this.isSending = false;
