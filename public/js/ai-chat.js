@@ -67,6 +67,8 @@ const AiChatApp = {
 
   computed: {
     isConfigured() {
+      // 只要存在当前配置ID即可视为已配置，避免临时状态误判
+      if (this.selectedConfigId) return true;
       return !!(this.baseUrl && this.apiKey && this.model);
     }
   },
@@ -215,8 +217,6 @@ const AiChatApp = {
       this.applyConfig(cfg);
       localStorage.setItem('aiChat.currentConfigId', String(cfg.id));
       try { CustomModal.showSuccess('已设置为当前配置'); } catch (_) {}
-      this.closeConfigModal();
-      this.closeConfigListModal();
     },
     async setCurrentConfigFromModal() {
       // 如果是新增，先保存再设为当前
@@ -224,6 +224,8 @@ const AiChatApp = {
         await this.saveConfigForm();
       }
       await this.setCurrentConfig(this.editingConfigId || this.selectedConfigId);
+      // 仅关闭添加/编辑弹窗，保留配置列表弹窗
+      this.closeConfigModal();
     },
     async deleteConfigById(id) {
       if (!id) return;
@@ -736,6 +738,18 @@ const AiChatApp = {
         this.activeConversationId = list[0].id;
         await this.loadMessages(this.activeConversationId);
       }
+      // 删除会话后，强制重新应用当前配置，防止状态被误置导致未配置提示
+      try {
+        const currentId = localStorage.getItem('aiChat.currentConfigId');
+        if (currentId) {
+          const cfg = await ChatDBService.getModelConfigById(currentId);
+          if (cfg) {
+            this.selectedConfigId = cfg.id;
+            this.configName = cfg.name || '';
+            this.applyConfig(cfg);
+          }
+        }
+      } catch (e) { /* 忽略兜底错误 */ }
     },
     stopStreaming() {
       if (this._abortController) {
