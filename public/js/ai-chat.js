@@ -7,7 +7,8 @@ const STORAGE = {
   apiKey: 'aiChat.apiKey',
   model: 'aiChat.model',
   systemPrompt: 'aiChat.systemPrompt',
-  temperature: 'aiChat.temperature'
+  temperature: 'aiChat.temperature',
+  timeoutSec: 'aiChat.timeoutSec'
 };
 
 const PROVIDERS = {
@@ -29,6 +30,8 @@ const AiChatApp = {
       model: localStorage.getItem(STORAGE.model) || PROVIDERS.deepseek.model,
       systemPrompt: localStorage.getItem(STORAGE.systemPrompt) || '',
       temperature: parseFloat(localStorage.getItem(STORAGE.temperature) || '0.7'),
+      // 流式超时（秒），可在配置中设置；默认90秒
+      streamTimeoutSec: parseInt(localStorage.getItem(STORAGE.timeoutSec) || '90', 10),
       messages: [],
       inputText: '',
       isSending: false,
@@ -223,7 +226,7 @@ const AiChatApp = {
       localStorage.setItem(STORAGE.model, (this.model || '').trim());
       localStorage.setItem(STORAGE.systemPrompt, this.systemPrompt || '');
       localStorage.setItem(STORAGE.temperature, String(this.temperature ?? 0.7));
-      localStorage.setItem(STORAGE.timeoutMs, String(this.streamTimeoutMs || 30000));
+      localStorage.setItem(STORAGE.timeoutSec, String(this.streamTimeoutSec || 30));
       try { CustomModal.showSuccess('配置已保存'); } catch (_) { /* fallback ignored */ }
       this.closeConfigModal();
     },
@@ -336,7 +339,8 @@ const AiChatApp = {
           const decoder = new TextDecoder('utf-8');
           let buffer = '';
           let timedOut = false;
-          const timeoutMs = 30000;
+          // 使用用户配置的超时（秒），限制在5s~600s范围
+          const timeoutMs = Math.max(5000, Math.min(600000, (this.streamTimeoutSec || 30) * 1000));
           const timeoutId = setTimeout(() => {
             timedOut = true;
             this._timedOut = true;
