@@ -2144,6 +2144,11 @@ footer p + p {
   backdrop-filter: blur(4px);
 }
 
+/* 置顶层的自定义弹窗（用于编辑配置覆盖列表弹窗） */
+.custom-modal.top {
+  z-index: 10002;
+}
+
 .custom-modal.show {
   opacity: 1;
   visibility: visible;

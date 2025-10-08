@@ -32,6 +32,10 @@ const AiChatApp = {
       temperature: parseFloat(localStorage.getItem(STORAGE.temperature) || '0.7'),
       // 流式超时（秒），可在配置中设置；默认90秒
       streamTimeoutSec: parseInt(localStorage.getItem(STORAGE.timeoutSec) || '90', 10),
+      // 多模型配置管理
+      modelConfigs: [],
+      selectedConfigId: null,
+      configName: '',
       messages: [],
       inputText: '',
       isSending: false,
@@ -39,7 +43,10 @@ const AiChatApp = {
       canRetry: false,
       lastPrompt: '',
       autoScroll: true,
+      // 配置弹窗（新增/编辑共用）
       configModalVisible: false,
+      configListModalVisible: false,
+      editingConfigId: null,
       // 会话历史
       conversations: [],
       activeConversationId: null
@@ -54,6 +61,7 @@ const AiChatApp = {
     this.$nextTick(() => {
       this.onInputChange();
       this.initConversations();
+      this.initModelConfigs();
     });
   },
 
@@ -77,6 +85,171 @@ const AiChatApp = {
   },
 
   methods: {
+    async initModelConfigs() {
+      try {
+        const list = await ChatDBService.listModelConfigs();
+        if (!list || list.length === 0) {
+          // 从现有本地存储迁移默认配置
+          const cfg = await ChatDBService.addModelConfig({
+            name: '默认',
+            provider: this.provider,
+            baseUrl: this.baseUrl,
+            apiKey: this.apiKey,
+            model: this.model,
+            systemPrompt: this.systemPrompt,
+            temperature: this.temperature,
+            streamTimeoutSec: this.streamTimeoutSec
+          });
+          this.modelConfigs = [cfg];
+          this.selectedConfigId = cfg.id;
+          this.configName = cfg.name;
+          localStorage.setItem('aiChat.currentConfigId', String(cfg.id));
+        } else {
+          this.modelConfigs = list;
+          const currentId = localStorage.getItem('aiChat.currentConfigId');
+          const target = list.find(c => String(c.id) === String(currentId)) || list[0];
+          this.selectedConfigId = target.id;
+          this.configName = target.name || '';
+          this.applyConfig(target);
+        }
+      } catch (e) { console.warn('初始化模型配置失败', e); }
+    },
+    applyConfig(cfg) {
+      if (!cfg) return;
+      this.provider = cfg.provider || this.provider;
+      this.baseUrl = cfg.baseUrl || this.baseUrl;
+      this.apiKey = cfg.apiKey || this.apiKey;
+      this.model = cfg.model || this.model;
+      this.systemPrompt = cfg.systemPrompt || '';
+      this.temperature = typeof cfg.temperature === 'number' ? cfg.temperature : this.temperature;
+      this.streamTimeoutSec = parseInt(cfg.streamTimeoutSec || this.streamTimeoutSec || 90, 10);
+    },
+    async selectModelConfig(id) {
+      if (!id) return;
+      try {
+        const cfg = await ChatDBService.getModelConfigById(id);
+        if (cfg) {
+          this.selectedConfigId = cfg.id;
+          this.configName = cfg.name || '';
+          this.applyConfig(cfg);
+          localStorage.setItem('aiChat.currentConfigId', String(cfg.id));
+          try { CustomModal.showSuccess('已切换为当前配置'); } catch (_) {}
+        }
+      } catch (e) { console.warn('选择模型配置失败', e); }
+    },
+    // 打开配置列表弹窗
+    openConfigListModal() {
+      this.configListModalVisible = true;
+    },
+    closeConfigListModal() {
+      this.configListModalVisible = false;
+    },
+    // 添加配置弹窗（清空并进入新增模式）
+    openAddConfigModal() {
+      this.editingConfigId = null;
+      // 默认使用当前提供商的预设
+      const p = PROVIDERS[this.provider] || PROVIDERS.deepseek;
+      this.configName = '';
+      this.provider = this.provider || 'deepseek';
+      this.baseUrl = p.baseUrl;
+      this.apiKey = '';
+      this.model = p.model;
+      this.systemPrompt = '';
+      this.temperature = typeof this.temperature === 'number' ? this.temperature : 0.7;
+      this.streamTimeoutSec = parseInt(this.streamTimeoutSec || 90, 10);
+      this.configModalVisible = true;
+    },
+    // 从列表进入编辑模式（复用添加弹窗）
+    async openEditConfigFromList(id) {
+      if (!id) return;
+      const cfg = await ChatDBService.getModelConfigById(id);
+      if (!cfg) return;
+      this.editingConfigId = cfg.id;
+      this.configName = cfg.name || '';
+      this.provider = cfg.provider || 'deepseek';
+      this.baseUrl = cfg.baseUrl || '';
+      this.apiKey = cfg.apiKey || '';
+      this.model = cfg.model || '';
+      this.systemPrompt = cfg.systemPrompt || '';
+      this.temperature = typeof cfg.temperature === 'number' ? cfg.temperature : 0.7;
+      this.streamTimeoutSec = parseInt(cfg.streamTimeoutSec || 90, 10);
+      this.configModalVisible = true;
+    },
+    // 保存（新增或更新，取决于 editingConfigId）
+    async saveConfigForm() {
+      try {
+        const payload = {
+          name: (this.configName || '未命名').trim(),
+          provider: this.provider,
+          baseUrl: (this.baseUrl || '').trim(),
+          apiKey: (this.apiKey || '').trim(),
+          model: (this.model || '').trim(),
+          systemPrompt: this.systemPrompt || '',
+          temperature: this.temperature ?? 0.7,
+          streamTimeoutSec: this.streamTimeoutSec || 90
+        };
+        let saved;
+        if (this.editingConfigId) {
+          saved = await ChatDBService.updateModelConfig({ id: this.editingConfigId, ...payload });
+        } else {
+          saved = await ChatDBService.addModelConfig(payload);
+          this.editingConfigId = saved.id;
+        }
+        this.modelConfigs = await ChatDBService.listModelConfigs();
+        this.selectedConfigId = saved.id;
+        this.configName = saved.name || '';
+        try { CustomModal.showSuccess('配置已保存'); } catch (_) {}
+      } catch (e) {
+        console.error('保存配置失败', e);
+        try { CustomModal.showError('保存配置失败: ' + (e.message || '未知错误')); } catch (_) {}
+      } finally {
+        this.closeConfigModal();
+      }
+    },
+    async setCurrentConfig(id) {
+      if (!id) return;
+      const cfg = await ChatDBService.getModelConfigById(id);
+      if (!cfg) return;
+      this.selectedConfigId = cfg.id;
+      this.configName = cfg.name || '';
+      this.applyConfig(cfg);
+      localStorage.setItem('aiChat.currentConfigId', String(cfg.id));
+      try { CustomModal.showSuccess('已设置为当前配置'); } catch (_) {}
+      this.closeConfigModal();
+      this.closeConfigListModal();
+    },
+    async setCurrentConfigFromModal() {
+      // 如果是新增，先保存再设为当前
+      if (!this.editingConfigId) {
+        await this.saveConfigForm();
+      }
+      await this.setCurrentConfig(this.editingConfigId || this.selectedConfigId);
+    },
+    async deleteConfigById(id) {
+      if (!id) return;
+      try {
+        await ChatDBService.deleteModelConfig(id);
+        const list = await ChatDBService.listModelConfigs();
+        this.modelConfigs = list;
+        // 若删除的是当前配置，回退到首个
+        if (String(this.selectedConfigId) === String(id)) {
+          if (list.length) {
+            this.selectedConfigId = list[0].id;
+            this.configName = list[0].name || '';
+            this.applyConfig(list[0]);
+            localStorage.setItem('aiChat.currentConfigId', String(list[0].id));
+          } else {
+            this.selectedConfigId = null;
+            this.configName = '';
+            localStorage.removeItem('aiChat.currentConfigId');
+          }
+        }
+        try { CustomModal.showSuccess('配置已删除'); } catch (_) {}
+      } catch (e) {
+        console.error('删除配置失败', e);
+        try { CustomModal.showError('删除配置失败: ' + (e.message || '未知错误')); } catch (_) {}
+      }
+    },
     // 基于当前会话消息生成自动标题（优先首条用户消息）
     generateAutoTitle() {
       const msgs = this.messages || [];
@@ -211,25 +384,14 @@ const AiChatApp = {
       this.messages = [];
     },
 
-    openConfigModal() {
-      this.configModalVisible = true;
-    },
+    // 兼容旧调用：如果需要添加配置，调用 openAddConfigModal
+    openConfigModal() { this.openAddConfigModal(); },
 
     closeConfigModal() {
       this.configModalVisible = false;
     },
 
-    saveConfig() {
-      localStorage.setItem(STORAGE.provider, this.provider);
-      localStorage.setItem(STORAGE.baseUrl, (this.baseUrl || '').trim());
-      localStorage.setItem(STORAGE.apiKey, (this.apiKey || '').trim());
-      localStorage.setItem(STORAGE.model, (this.model || '').trim());
-      localStorage.setItem(STORAGE.systemPrompt, this.systemPrompt || '');
-      localStorage.setItem(STORAGE.temperature, String(this.temperature ?? 0.7));
-      localStorage.setItem(STORAGE.timeoutSec, String(this.streamTimeoutSec || 30));
-      try { CustomModal.showSuccess('配置已保存'); } catch (_) { /* fallback ignored */ }
-      this.closeConfigModal();
-    },
+    // 旧方法删去，改用通用 saveConfigForm / deleteConfigById / setCurrentConfigFromModal
 
     resetToProviderDefaults() {
       const p = PROVIDERS[this.provider] || PROVIDERS.deepseek;
@@ -263,7 +425,7 @@ const AiChatApp = {
       if (!content) return;
       if (!this.isConfigured) {
         try { CustomModal.showWarning('请先完成模型配置：基础地址与模型名称'); } catch (_) { /* fallback ignored */ }
-        this.openConfigModal();
+        this.openAddConfigModal();
         return;
       }
       // 推送并保存用户消息（携带id）
@@ -474,10 +636,21 @@ const AiChatApp = {
               throw new Error('重试流式失败');
             }
           } catch (retryErr) {
-            const msg = retryErr?.response?.data?.error?.message || retryErr?.message || e?.response?.data?.error?.message || e?.message || '未知错误';
-            this.messages.push({ role: 'assistant', content: `错误：${msg}` });
-            this.connStatus = 'error';
-            this.canRetry = true;
+            // 流式重试失败后，回退为一次性JSON响应，尽量给出内容
+            try {
+              const axiosHeaders = { 'Content-Type': 'application/json' };
+              const res = await axios.post('/api/ai/proxy', { url: this.baseUrl, apiKey: this.apiKey, provider: this.provider, payload: { ...payload, stream: false } }, { headers: axiosHeaders });
+              const choice = res?.data?.choices?.[0];
+              const aiMsg = choice?.message?.content || choice?.delta?.content || res?.data?.output_text || '[无内容]';
+              this.messages[aiIndex].content += aiMsg;
+              this.connStatus = 'done';
+              this.$nextTick(() => this.highlightCodes());
+            } catch (fallbackErr) {
+              const msg = retryErr?.response?.data?.error?.message || retryErr?.message || e?.response?.data?.error?.message || e?.message || '未知错误';
+              this.messages.push({ role: 'assistant', content: `错误：${msg}` });
+              this.connStatus = 'error';
+              this.canRetry = true;
+            }
           }
         }
       } finally {

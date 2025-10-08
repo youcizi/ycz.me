@@ -24,8 +24,9 @@
           <a href="/data-manager" class="nav-link">数据管理</a>
           <span class="nav-link active">AI聊天</span>
         </div>
-        <div class="top-actions">
-          <button class="btn btn-primary" @click="openConfigModal">编辑配置</button>
+        <div class="top-actions" style="display:flex; gap:8px;">
+          <button class="btn btn-primary" @click="openAddConfigModal">添加配置</button>
+          <button class="btn btn-secondary" @click="openConfigListModal">配置列表</button>
         </div>
       </div>
 
@@ -58,7 +59,7 @@
             <!-- 右侧：聊天主体 -->
             <div class="chat-column">
               <div v-if="!isConfigured" class="tool-panel">
-                尚未配置模型信息，请点击右上角“编辑配置”进行设置。
+                尚未配置模型信息，请点击右上角“添加配置”进行设置。
               </div>
 
               <div class="chat-scroll" ref="chatScroll">
@@ -97,7 +98,7 @@
       </section>
 
       <!-- 配置弹窗 -->
-      <div v-if="configModalVisible" class="custom-modal show">
+      <div v-if="configModalVisible" class="custom-modal show top">
         <div class="modal-content">
           <button class="modal-close" @click="closeConfigModal">×</button>
           <div class="modal-header">
@@ -105,6 +106,10 @@
           </div>
           <div class="modal-body">
             <div class="tool-form">
+              <div class="tool-row column">
+                <label class="tool-label">配置名称</label>
+                <input type="text" v-model="configName" class="tool-input" placeholder="例如：OpenAI · gpt-4o-mini">
+              </div>
               <div class="tool-row column">
                 <label class="tool-label">提供商</label>
                 <select v-model="provider" class="tool-select">
@@ -140,7 +145,44 @@
           </div>
           <div class="modal-footer">
             <button class="modal-btn secondary" @click="resetToProviderDefaults">重置为提供商默认</button>
-            <button class="modal-btn primary" @click="saveConfig">保存配置</button>
+            <button class="modal-btn primary" @click="saveConfigForm">保存</button>
+            <button class="modal-btn primary" @click="setCurrentConfigFromModal">设置为当前配置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 配置列表弹窗 -->
+      <div v-if="configListModalVisible" class="custom-modal show">
+        <div class="modal-content">
+          <button class="modal-close" @click="closeConfigListModal">×</button>
+          <div class="modal-header">
+            <h3 class="modal-title">配置列表</h3>
+          </div>
+          <div class="modal-body">
+            <div class="tool-form">
+              <div class="tool-row column">
+                <ul class="tools-list">
+                  <li v-for="cfg in modelConfigs" :key="cfg.id" class="tools-item" :class="{ active: String(cfg.id) === String(selectedConfigId) }" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <div style="flex:1; overflow:hidden;">
+                      <div class="tool-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        {{ (cfg.name||'未命名') }} · {{ cfg.provider }} · {{ cfg.model }}
+                        <span v-if="String(cfg.id) === String(selectedConfigId)" class="current-badge">当前</span>
+                      </div>
+                      <div class="tool-hint" style="font-size:12px;">更新时间：{{ formatRelativeTime(cfg.updatedAt || Date.now()) }}</div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                      <button class="tool-btn" @click="openEditConfigFromList(cfg.id)">编辑</button>
+                      <button class="tool-btn" @click="setCurrentConfig(cfg.id)" :disabled="String(cfg.id) === String(selectedConfigId)">{{ String(cfg.id) === String(selectedConfigId) ? '已为当前' : '设为当前' }}</button>
+                      <button class="tool-btn danger" @click="deleteConfigById(cfg.id)">删除</button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="modal-btn secondary" @click="closeConfigListModal">关闭</button>
+            <button class="modal-btn primary" @click="openAddConfigModal">添加配置</button>
           </div>
         </div>
       </div>
