@@ -80,6 +80,22 @@ class HomeController {
       ctx.body = { success: false, message: '服务器内部错误' };
     }
   }
+
+  /**
+   * 渲染 Emoji 图标页面
+   * @param {Object} ctx Koa上下文对象
+   */
+  async emoji(ctx) {
+    try {
+      await ctx.render('emoji', {
+        title: 'Emoji图标大全'
+      });
+    } catch (error) {
+      console.error('渲染Emoji图标页面失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
 }
 
 module.exports = HomeController;

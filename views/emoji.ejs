@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <meta name="description" content="Emoji图标大全，按分类浏览，支持搜索与复制">
+  <meta name="keywords" content="Emoji,图标大全,分类,搜索,复制">
+
+  <!-- 复用站点基础样式，使风格与首页一致 -->
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- 本页面独立样式，避免影响其他页面 -->
+  <link rel="stylesheet" href="/css/emoji-icons.css">
+</head>
+<body>
+  <div id="app" class="app-container emoji-page" v-cloak>
+    <main class="main-content">
+      <!-- 顶部导航栏，与首页风格一致 -->
+      <div class="top-bar">
+        <div class="top-nav-links">
+          <a href="/" class="nav-link">返回首页</a>
+          <a href="/tools" class="nav-link">在线工具</a>
+          <a href="/ai-chat" class="nav-link">AI聊天</a>
+          <a href="/data-manager" class="nav-link">数据管理</a>
+          <span class="nav-link active">Emoji图标</span>
+        </div>
+      </div>
+
+      <!-- 主体布局：侧边栏 + 主内容 -->
+      <div class="emoji-layout">
+        <!-- 左侧侧边栏：分类列表 -->
+        <aside class="emoji-sidebar" aria-label="分类导航">
+          <div class="sidebar-header">分类</div>
+          <button class="category-item" :class="{ active: !activeCategory }" @click="selectCategory(null)">全部</button>
+          <button v-for="cat in categories" :key="cat.name" class="category-item"
+                  :class="{ active: cat.name === activeCategory }"
+                  @click="selectCategory(cat.name)">{{ cat.label }}</button>
+        </aside>
+
+        <!-- 右侧主内容：搜索工具栏 + 网格列表 -->
+        <section class="emoji-main">
+          <div class="emoji-toolbar">
+            <input type="text" v-model="searchQuery" class="emoji-input" placeholder="搜索emoji或关键字，如：笑/猫/smile" aria-label="搜索Emoji">
+            <span class="emoji-count">共 {{ filteredCount }} 个图标</span>
+          </div>
+
+          <div class="emoji-grid" aria-label="Emoji图标列表">
+            <button v-for="item in filteredEmojis" :key="item.char + '-' + item.name"
+                    class="emoji-card" :title="item.name"
+                    @pointerdown="pressStart($event)" @pointerup="pressEnd($event)"
+                    @click="copyEmoji(item.char, $event)">
+              <span class="emoji-char">{{ item.char }}</span>
+              <span class="emoji-name">{{ item.cn || item.name }}</span>
+              <span class="emoji-check-badge" aria-hidden="true">✓</span>
+            </button>
+            <div v-if="!filteredEmojis.length" class="emoji-empty">未找到匹配的图标</div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- 复制提示 -->
+    <div class="emoji-toast" v-show="toast.show">{{ toast.text }}</div>
+  </div>
+
+  <!-- Vue3 与页面脚本 -->
+  <script src="/js/vue.global.js"></script>
+  <script type="module" src="/js/emoji-icons.js"></script>
+</body>
+</html>

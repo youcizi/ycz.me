@@ -25,6 +25,9 @@ router.get('/tools', homeController.tools.bind(homeController));
 // AI聊天页面路由
 router.get('/ai-chat', homeController.aiChat.bind(homeController));
 
+// Emoji图标页面路由
+router.get('/emoji', homeController.emoji.bind(homeController));
+
 // API路由
 router.get('/api/websites/:category', apiController.getWebsitesByCategory.bind(apiController));
 router.get('/api/search', apiController.searchWebsites.bind(apiController));
