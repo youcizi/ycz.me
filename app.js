@@ -27,9 +27,8 @@ app.on('error', (err, ctx) => {
   console.error('服务器错误:', err);
 });
 
-// 固定端口：优先读取环境变量PORT，否则使用固定端口（避免每次随机端口）
-// 为避免与已运行的实例端口冲突，将默认端口调整为 52868
-const requestedPort = parseInt(process.env.PORT || '52868', 10);
+// 固定端口：统一使用 3002，不再受环境变量影响
+const requestedPort = 3002;
 const server = app.listen(requestedPort, () => {
   const address = server.address();
   const actualPort = typeof address === 'string' ? address : address.port;
