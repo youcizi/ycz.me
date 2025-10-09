@@ -219,13 +219,13 @@
                         <button class="filter-btn" :class="{ active: currentFilter === 'all' }" @click="setFilter('all')" type="button">全部</button>
                         <button class="filter-btn has-bg"
                                 v-for="tag in filterTags" :key="tag.id"
-                                :style="{ backgroundColor: tag.backgroundColor, borderColor: tag.backgroundColor, color: '#ffffff' }"
+                                :style="{ backgroundColor: currentFilter === tag.key? tag.backgroundColor:'#f8f8f8',color: currentFilter === tag.key? '#ffffff':'#6b7280' }"
                                 :class="{ active: currentFilter === tag.key }"
                                 @click="setFilter(tag.key)"
                                 type="button">
                             {{ tag.name }}
                         </button>
-                        <button class="filter-btn manage-btn" @click="openFilterManager" type="button">管理</button>
+                        <button class="filter-btn manage-btn" @click="openFilterManager" type="button">⚙️</button>
                     </div>
                 </div>
             </div>
