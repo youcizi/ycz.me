@@ -82,11 +82,22 @@
                 <div class="tool-editor" contenteditable="true" ref="inputArea" data-placeholder="输入你的问题..."
                   @keydown.enter.exact.prevent="sendMessage"
                   @input="onInputChange"></div>
+                <div v-if="attachedImages.length" class="tool-row" style="flex-wrap:wrap; gap:6px; margin-top:6px;">
+                  <div v-for="(img, idx) in attachedImages" :key="idx" style="position:relative; display:inline-block;">
+                    <img :src="img.dataUrl" :alt="img.name" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid #333;">
+                    <button class="tool-btn danger" style="position:absolute; top:-6px; right:-6px; padding:0 6px; line-height:18px;" @click="removeAttachedImage(idx)">×</button>
+                  </div>
+                </div>
                 <div class="input-actions">
                   <span class="conn-status" :class="connStatus" :title="connStatus" @click="isSending ? stopStreaming() : null"></span>
                   <button class="btn btn-primary" @click="isSending ? stopStreaming() : sendMessage()">{{ isSending ? '停止' : '发送' }}</button>
                   <button class="btn btn-secondary" v-if="isSending || canRetry" :disabled="!isSending && !canRetry" @click="isSending ? stopStreaming() : retryLast()">{{ isSending ? '停止' : '重新发送' }}</button>
                   <button class="btn btn-secondary" @click="clearCurrentConversation" :disabled="isSending">清空会话</button>
+                  <label class="btn" style="margin-left:8px;">
+                    <input type="file" accept="image/*" multiple style="display:none;" @change="onImageFilesSelected($event)">
+                    📎 上传图片
+                  </label>
+                  <button class="btn btn-secondary" @click="generateImage" title="使用图片模型生成图片">🎨 生成图片</button>
                   <label class="tool-label" style="margin-left:auto; display:flex; align-items:center; gap:6px;">
                     <input type="checkbox" v-model="autoScroll"> 自动滚动
                   </label>
@@ -127,6 +138,30 @@
               <div class="tool-row column">
                 <label class="tool-label">模型名称</label>
                 <input type="text" v-model="model" class="tool-input" placeholder="例如：gpt-4o-mini 或 deepseek-chat">
+              </div>
+              <hr style="margin:12px 0; opacity:0.4;">
+              <div class="tool-row column">
+                <label class="tool-label">图片模型设置（可选）</label>
+                <p class="tool-hint">用于在对话中生成图片；不同服务商的地址与模型可能不同。</p>
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">图片生成地址</label>
+                <input type="text" v-model="imageBaseUrl" class="tool-input" placeholder="例如：https://api.openai.com/v1/images/generations">
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">图片模型名称</label>
+                <input type="text" v-model="imageModel" class="tool-input" placeholder="例如：gpt-image-1 或相应模型名">
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">图片尺寸</label>
+                <input type="text" v-model="imageSize" class="tool-input" placeholder="例如：1024x1024">
+              </div>
+              <div class="tool-row column">
+                <label class="tool-label">返回格式</label>
+                <select v-model="imageFormat" class="tool-select">
+                  <option value="url">图片URL</option>
+                  <option value="b64_json">Base64</option>
+                </select>
               </div>
               <div class="tool-row column">
                 <label class="tool-label">系统提示（可选）</label>

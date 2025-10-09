@@ -183,6 +183,11 @@ const ChatDBService = (() => {
       systemPrompt: config?.systemPrompt || '',
       temperature: typeof config?.temperature === 'number' ? config.temperature : 0.7,
       streamTimeoutSec: parseInt(config?.streamTimeoutSec || 90, 10),
+      // 图片生成相关（可选）
+      imageBaseUrl: (config?.imageBaseUrl || '').trim(),
+      imageModel: (config?.imageModel || '').trim(),
+      imageSize: (config?.imageSize || '1024x1024').trim(),
+      imageFormat: (config?.imageFormat || 'url').trim(),
       createdAt: config?.createdAt || now,
       updatedAt: now
     };
@@ -207,6 +212,11 @@ const ChatDBService = (() => {
       systemPrompt: config?.systemPrompt || '',
       temperature: typeof config?.temperature === 'number' ? config.temperature : 0.7,
       streamTimeoutSec: parseInt(config?.streamTimeoutSec || 90, 10),
+      // 图片生成相关（可选）
+      imageBaseUrl: (config?.imageBaseUrl || '').trim(),
+      imageModel: (config?.imageModel || '').trim(),
+      imageSize: (config?.imageSize || '1024x1024').trim(),
+      imageFormat: (config?.imageFormat || 'url').trim(),
       createdAt: config?.createdAt || now,
       updatedAt: now
     };

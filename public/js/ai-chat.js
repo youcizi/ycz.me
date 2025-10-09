@@ -38,6 +38,12 @@ const AiChatApp = {
       configName: '',
       messages: [],
       inputText: '',
+      // 图片输入与生成
+      attachedImages: [], // [{ name, dataUrl }]
+      imageBaseUrl: '',
+      imageModel: '',
+      imageSize: '1024x1024',
+      imageFormat: 'url', // 'url' | 'b64_json'
       isSending: false,
       connStatus: 'idle',
       canRetry: false,
@@ -118,6 +124,11 @@ const AiChatApp = {
       this.systemPrompt = cfg.systemPrompt || '';
       this.temperature = typeof cfg.temperature === 'number' ? cfg.temperature : this.temperature;
       this.streamTimeoutSec = parseInt(cfg.streamTimeoutSec || this.streamTimeoutSec || 90, 10);
+      // 图片生成相关（可选）
+      this.imageBaseUrl = cfg.imageBaseUrl || this.imageBaseUrl || '';
+      this.imageModel = cfg.imageModel || this.imageModel || '';
+      this.imageSize = cfg.imageSize || this.imageSize || '1024x1024';
+      this.imageFormat = cfg.imageFormat || this.imageFormat || 'url';
     },
     async selectModelConfig(id) {
       if (!id) return;
@@ -152,6 +163,11 @@ const AiChatApp = {
       this.systemPrompt = '';
       this.temperature = typeof this.temperature === 'number' ? this.temperature : 0.7;
       this.streamTimeoutSec = parseInt(this.streamTimeoutSec || 90, 10);
+      // 图片生成默认空
+      this.imageBaseUrl = '';
+      this.imageModel = '';
+      this.imageSize = '1024x1024';
+      this.imageFormat = 'url';
       this.configModalVisible = true;
     },
     // 从列表进入编辑模式（复用添加弹窗）
@@ -168,6 +184,10 @@ const AiChatApp = {
       this.systemPrompt = cfg.systemPrompt || '';
       this.temperature = typeof cfg.temperature === 'number' ? cfg.temperature : 0.7;
       this.streamTimeoutSec = parseInt(cfg.streamTimeoutSec || 90, 10);
+      this.imageBaseUrl = cfg.imageBaseUrl || '';
+      this.imageModel = cfg.imageModel || '';
+      this.imageSize = cfg.imageSize || '1024x1024';
+      this.imageFormat = cfg.imageFormat || 'url';
       this.configModalVisible = true;
     },
     // 保存（新增或更新，取决于 editingConfigId）
@@ -181,7 +201,12 @@ const AiChatApp = {
           model: (this.model || '').trim(),
           systemPrompt: this.systemPrompt || '',
           temperature: this.temperature ?? 0.7,
-          streamTimeoutSec: this.streamTimeoutSec || 90
+          streamTimeoutSec: this.streamTimeoutSec || 90,
+          // 图片生成配置（可选）
+          imageBaseUrl: (this.imageBaseUrl || '').trim(),
+          imageModel: (this.imageModel || '').trim(),
+          imageSize: (this.imageSize || '1024x1024').trim(),
+          imageFormat: (this.imageFormat || 'url').trim()
         };
         let saved;
         if (this.editingConfigId) {
@@ -392,6 +417,7 @@ const AiChatApp = {
       const p = PROVIDERS[this.provider] || PROVIDERS.deepseek;
       this.baseUrl = p.baseUrl;
       this.model = p.model;
+      // 重置不影响图片生成配置
     },
 
     clearChat() {
@@ -413,6 +439,27 @@ const AiChatApp = {
       const box = this.$refs.chatScroll;
       if (!box) return;
       box.scrollTop = box.scrollHeight;
+    },
+
+    // 图片上传与预览
+    async onImageFilesSelected(evt) {
+      const files = Array.from((evt?.target?.files) || []);
+      for (const f of files) {
+        if (!f.type.startsWith('image/')) continue;
+        const reader = new FileReader();
+        const p = new Promise((resolve) => {
+          reader.onload = () => resolve({ name: f.name, dataUrl: reader.result });
+        });
+        reader.readAsDataURL(f);
+        const item = await p;
+        this.attachedImages.push(item);
+      }
+      // 清空 input 以便重复选择同一文件
+      try { evt.target.value = ''; } catch (_) {}
+    },
+    removeAttachedImage(idx) {
+      if (idx < 0 || idx >= this.attachedImages.length) return;
+      this.attachedImages.splice(idx, 1);
     },
 
     async sendMessage() {
@@ -454,6 +501,23 @@ const AiChatApp = {
         msgs.push({ role: 'system', content: this.systemPrompt.trim() });
       }
       msgs.push(...this.messages.map(m => ({ role: m.role, content: m.content })));
+      // 若有图片附件，将最后一条用户消息的 content 替换为多模态数组
+      if (this.attachedImages && this.attachedImages.length > 0) {
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const mm = msgs[i];
+          if (mm.role === 'user') {
+            const parts = [];
+            if (content && content.trim()) {
+              parts.push({ type: 'text', text: content });
+            }
+            for (const img of this.attachedImages) {
+              parts.push({ type: 'image_url', image_url: { url: img.dataUrl } });
+            }
+            mm.content = parts;
+            break;
+          }
+        }
+      }
 
       const payload = {
         model: this.model,
@@ -654,6 +718,76 @@ const AiChatApp = {
         this._abortController = null;
         this._userStopped = false;
         this._timedOut = false;
+        // 发送后清理附件
+        this.attachedImages = [];
+      }
+    },
+    // 图片生成
+    async generateImage() {
+      const prompt = (this.inputText || '').trim();
+      if (!prompt) return;
+      if (!this.apiKey || !this.imageBaseUrl || !this.imageModel) {
+        try { CustomModal.showWarning('请先在模型配置中填写图片生成的地址与模型'); } catch (_) {}
+        this.openAddConfigModal();
+        return;
+      }
+      const nowTs = Date.now();
+      const userMsgId = 'm_' + nowTs + '_u';
+      // 作为纯文本消息记录提示词
+      this.messages.push({ id: userMsgId, role: 'user', content: prompt, createdAt: nowTs });
+      if (this.activeConversationId) {
+        await ChatDBService.addMessage({ id: userMsgId, conversationId: this.activeConversationId, role: 'user', content: prompt, createdAt: nowTs });
+        const conv = this.conversations.find(c => c.id === this.activeConversationId);
+        if (conv) { conv.updatedAt = Date.now(); await ChatDBService.updateConversation(conv); }
+      }
+      // 清空输入
+      this.inputText = '';
+      const inputEl = this.$refs.inputArea;
+      if (inputEl) { inputEl.innerText = ''; inputEl.innerHTML = ''; inputEl.style.height = 'auto'; }
+      this.isSending = true;
+      this.connStatus = 'connecting';
+      const aiIndex = this.messages.length;
+      const aiMsgId = 'm_' + Date.now() + '_a';
+      this.messages.push({ id: aiMsgId, role: 'assistant', content: '正在生成图片…', createdAt: Date.now() });
+
+      try {
+        const payload = {
+          prompt,
+          model: this.imageModel,
+          size: this.imageSize || '1024x1024',
+          response_format: (this.imageFormat === 'b64_json') ? 'b64_json' : 'url'
+        };
+        const axiosHeaders = { 'Content-Type': 'application/json' };
+        const res = await axios.post('/api/ai/proxy', { url: this.imageBaseUrl, apiKey: this.apiKey, provider: this.provider, payload }, { headers: axiosHeaders });
+        // 解析返回
+        let imgMd = '';
+        const dataItem = res?.data?.data?.[0] || res?.data?.choices?.[0];
+        if (this.imageFormat === 'b64_json') {
+          const b64 = dataItem?.b64_json || dataItem?.image_base64;
+          if (b64) {
+            const url = 'data:image/png;base64,' + b64;
+            imgMd = `![](${url})`;
+          }
+        } else {
+          const url = dataItem?.url || dataItem?.image_url;
+          if (url) { imgMd = `![](${url})`; }
+        }
+        this.messages[aiIndex].content = imgMd || '[未返回图片]';
+        this.connStatus = 'done';
+        // 保存消息
+        if (this.activeConversationId) {
+          await ChatDBService.addMessage({ id: aiMsgId, conversationId: this.activeConversationId, role: 'assistant', content: this.messages[aiIndex].content, createdAt: Date.now() });
+          const conv = this.conversations.find(c => c.id === this.activeConversationId);
+          if (conv) { conv.updatedAt = Date.now(); await ChatDBService.updateConversation(conv); }
+        }
+      } catch (e) {
+        console.error('生成图片失败', e);
+        const msg = e?.response?.data?.error?.message || e?.message || '生成失败';
+        this.messages[aiIndex].content = `错误：${msg}`;
+        this.connStatus = 'error';
+      } finally {
+        this.isSending = false;
+        this.$nextTick(() => { this.scrollToBottom(); this.highlightCodes(); });
       }
     },
     async deleteMessage(id) {
@@ -793,7 +927,8 @@ const AiChatApp = {
         s = s.replace(/`([^`]+)`/g, (m, code) => `<code class="md-inline">${code}</code>`);
         s = s.replace(/\*\*([^*]+)\*\*/g, (m, bold) => `<strong>${bold}</strong>`);
         s = s.replace(/(^|\s)\*([^*]+)\*(?=\s|$)/g, (m, pre, ital) => `${pre}<em>${ital}</em>`);
-        s = s.replace(/!\[([^\]]*)\]\((https?:[^\s)]+)\)/g, (m, alt, url) => `<img class="md-img" src="${url}" alt="${alt}">`);
+        // 支持 http/https 以及 data: URI 的图片渲染
+        s = s.replace(/!\[([^\]]*)\]\(((?:https?|data):[^\s)]+)\)/g, (m, alt, url) => `<img class="md-img" src="${url}" alt="${alt}">`);
         s = s.replace(/\[([^\]]+)\]\((https?:[^\s)]+)\)/g, (m, t, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${t}</a>`);
         return s;
       };
