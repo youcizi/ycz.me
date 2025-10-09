@@ -1,4 +1,6 @@
 const Koa = require('koa');
+// 加载 .env 配置，支持 PORT 与 DEFAULT_SITE 等环境变量
+try { require('dotenv').config(); } catch (e) {}
 const views = require('koa-views');
 const serve = require('koa-static');
 const bodyParser = require('koa-bodyparser');
@@ -27,8 +29,8 @@ app.on('error', (err, ctx) => {
   console.error('服务器错误:', err);
 });
 
-// 固定端口：统一使用 3002，不再受环境变量影响
-const requestedPort = 3002;
+// 读取 .env 中的 PORT，若未设置则默认 3002
+const requestedPort = parseInt(process.env.PORT || '3002', 10);
 const server = app.listen(requestedPort, () => {
   const address = server.address();
   const actualPort = typeof address === 'string' ? address : address.port;

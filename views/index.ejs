@@ -13,6 +13,10 @@
     <!-- Vue3 和 Axios CDN - 优先加载 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+      // 仅使用 Koa 服务端注入的默认数据，避免重复来源
+      window.__DEFAULT_DATA__ = <%- JSON.stringify(typeof defaultData !== 'undefined' ? defaultData : {}) %>;
+    </script>
     
     <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css">

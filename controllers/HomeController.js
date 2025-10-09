@@ -4,6 +4,28 @@
  */
 
 const Website = require('../models/Website');
+const https = require('https');
+const http = require('http');
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const lib = url.startsWith('https') ? https : http;
+    const req = lib.get(url, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve(json);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(5000, () => { req.destroy(new Error('请求超时')); });
+  });
+}
 
 class HomeController {
   constructor() {
@@ -16,10 +38,27 @@ class HomeController {
    */
   async index(ctx) {
     try {
+      // 统一由 Koa 服务端提供 defaultData，来源 .env 的 DEFAULT_SITE 或后备地址
+      const defaultApiUrl = process.env.DEFAULT_SITE || 'https://admin.ycz.me/api/navs.index/index';
+      let defaultData = { categories: [], websites: [], filters: [], searchEngines: [] };
+      try {
+        const json = await fetchJson(defaultApiUrl);
+        const payload = json?.data || json || {};
+        defaultData = {
+          categories: Array.isArray(payload.categories) ? payload.categories : [],
+          websites: Array.isArray(payload.websites) ? payload.websites : [],
+          filters: Array.isArray(payload.filters) ? payload.filters : [],
+          searchEngines: Array.isArray(payload.searchEngines) ? payload.searchEngines : []
+        };
+      } catch (e) {
+        console.warn('默认数据接口获取失败，使用空数据作为回退:', e?.message || e);
+      }
+
       await ctx.render('index', {
         title: 'AI网址导航',
         categories: this.websiteModel.getAllCategories(),
-        websites: this.websiteModel.getAllWebsites()
+        websites: this.websiteModel.getAllWebsites(),
+        defaultData
       });
     } catch (error) {
       console.error('渲染主页失败:', error);
