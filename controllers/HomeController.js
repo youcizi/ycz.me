@@ -39,7 +39,7 @@ class HomeController {
   async index(ctx) {
     try {
       // 统一由 Koa 服务端提供 defaultData，来源 .env 的 DEFAULT_SITE 或后备地址
-      const defaultApiUrl = process.env.DEFAULT_SITE || 'https://admin.ycz.me/api/navs.index/index';
+      const defaultApiUrl = process.env.DEFAULT_SITE || 'https://admin.ycz.me/api/site.index/index';
       let defaultData = { categories: [], websites: [], filters: [], searchEngines: [] };
       try {
         const json = await fetchJson(defaultApiUrl);
