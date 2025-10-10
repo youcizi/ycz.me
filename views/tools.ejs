@@ -227,6 +227,9 @@
     <script src="https://cdn.jsdelivr.net/npm/csso@5.0.5/dist/csso.min.js"></script>
     <!-- 工具页应用脚本 -->
     <script src="/js/tools-app.js"></script>
+    <script>
+      window.__FEEDBACK_URL__ = '<%= typeof feedbackUrl !== 'undefined' ? feedbackUrl : 'https://admin.ycz.me/api/site.index/feedback' %>';
+    </script>
     <!-- 首次访问弹窗与公告挂件 -->
     <script type="module" src="/js/first-visit.js"></script>
 </body>

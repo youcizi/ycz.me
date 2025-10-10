@@ -42,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
   widget.className = 'announcement-widget';
   widget.innerHTML = `
     <div class="ann-panel">
-      <button class="ann-open" title="查看重要提示">📣 公告</button>
+      <button class="ann-open" title="查看重要提示">📣公告</button>
+	  <button class="ann-open feedback" title="留言反馈">💬留言反馈</button>
       <button class="ann-collapse" style="font-size:12px;" title="收起">▶︎</button>
     </div>
     <button class="ann-collapsed-arrow" title="展开">◀</button>
@@ -62,6 +63,108 @@ document.addEventListener('DOMContentLoaded', () => {
   annOpen.addEventListener('click', showModal);
   annCollapse.addEventListener('click', () => setCollapsed(true));
   annArrow.addEventListener('click', () => setCollapsed(false));
+
+  // ===== 留言反馈弹窗 =====
+  const feedbackUrl = (typeof window.__FEEDBACK_URL__ !== 'undefined' && window.__FEEDBACK_URL__) 
+    ? window.__FEEDBACK_URL__ 
+    : 'https://admin.ycz.me/api/site.index/feedback';
+
+  const fbOverlay = document.createElement('div');
+  fbOverlay.className = 'first-visit-modal fv-hidden';
+  fbOverlay.innerHTML = `
+    <div class="fv-backdrop"></div>
+    <div class="fv-modal fv-feedback" role="dialog" aria-modal="true" aria-labelledby="fb-title">
+      <button class="fv-close" aria-label="关闭">×</button>
+      <div class="fv-header">
+        <h3 id="fb-title" class="fv-title">留言反馈</h3>
+      </div>
+      <div class="fv-body">
+        <div class="fv-form">
+          <label>姓名/昵称</label>
+          <input type="text" class="fb-name" placeholder="可留空" autocomplete="off">
+          <label>联系方式</label>
+          <input type="text" class="fb-contact" placeholder="邮箱/微信/电话，选填" autocomplete="off">
+          <label>留言内容</label>
+          <textarea class="fb-msg" placeholder="请输入你的建议、问题或需求" rows="4"></textarea>
+        </div>
+        <div class="fb-status" style="margin-top:8px;color:#6b7280;font-size:13px;display:none;"></div>
+      </div>
+      <div class="fv-footer">
+        <button class="fv-link" style="display:none;"></button>
+        <button class="fb-submit">提交</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(fbOverlay);
+
+  const showFeedback = () => {
+    fbOverlay.classList.remove('fv-hidden');
+  };
+  const hideFeedback = () => {
+    fbOverlay.classList.add('fv-hidden');
+  };
+
+  // 事件绑定
+  const fbBackdropEl = fbOverlay.querySelector('.fv-backdrop');
+  const fbCloseBtn = fbOverlay.querySelector('.fv-close');
+  const fbSubmitBtn = fbOverlay.querySelector('.fb-submit');
+  const fbNameInput = fbOverlay.querySelector('.fb-name');
+  const fbContactInput = fbOverlay.querySelector('.fb-contact');
+  const fbMsgInput = fbOverlay.querySelector('.fb-msg');
+  const fbStatusEl = fbOverlay.querySelector('.fb-status');
+
+  const feedbackBtn = widget.querySelector('.ann-open.feedback');
+  feedbackBtn && feedbackBtn.addEventListener('click', showFeedback);
+  fbBackdropEl.addEventListener('click', hideFeedback);
+  fbCloseBtn.addEventListener('click', hideFeedback);
+
+  const setFbStatus = (text, type = 'info') => {
+    if (!fbStatusEl) return;
+    fbStatusEl.style.display = 'block';
+    fbStatusEl.style.color = type === 'error' ? '#ef4444' : (type === 'success' ? '#10b981' : '#6b7280');
+    fbStatusEl.textContent = text || '';
+  };
+
+  fbSubmitBtn.addEventListener('click', async () => {
+    const name = fbNameInput.value.trim();
+    const contact = fbContactInput.value.trim();
+    const msg = fbMsgInput.value.trim();
+
+    if (!msg) {
+      setFbStatus('请填写留言内容', 'error');
+      fbMsgInput.focus();
+      return;
+    }
+
+    try {
+      setFbStatus('提交中...', 'info');
+      fbSubmitBtn.disabled = true;
+
+      const res = await fetch(feedbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, contact, msg })
+      });
+
+      let data = null;
+      try { data = await res.json(); } catch (e) {}
+
+      if (res.ok) {
+        setFbStatus('提交成功，感谢你的反馈！', 'success');
+        fbNameInput.value = '';
+        fbContactInput.value = '';
+        fbMsgInput.value = '';
+        setTimeout(() => hideFeedback(), 1200);
+      } else {
+        const message = (data && (data.msg || data.message)) || `提交失败(${res.status})`;
+        setFbStatus(message, 'error');
+      }
+    } catch (error) {
+      setFbStatus('网络异常或跨域限制，稍后重试', 'error');
+    } finally {
+      fbSubmitBtn.disabled = false;
+    }
+  });
 
   // Init from localStorage
   let collapsed = false;

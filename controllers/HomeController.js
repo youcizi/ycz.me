@@ -40,6 +40,7 @@ class HomeController {
     try {
       // 统一由 Koa 服务端提供 defaultData，来源 .env 的 DEFAULT_SITE 或后备地址
       const defaultApiUrl = process.env.DEFAULT_SITE || 'https://admin.ycz.me/api/site.index/index';
+      const feedbackUrl = process.env.FEEDBACK_URL || 'https://admin.ycz.me/api/site.index/feedback';
       let defaultData = { categories: [], websites: [], filters: [], searchEngines: [] };
       try {
         const json = await fetchJson(defaultApiUrl);
@@ -58,7 +59,8 @@ class HomeController {
         title: 'AI网址导航',
         categories: this.websiteModel.getAllCategories(),
         websites: this.websiteModel.getAllWebsites(),
-        defaultData
+        defaultData,
+        feedbackUrl
       });
     } catch (error) {
       console.error('渲染主页失败:', error);
@@ -75,6 +77,7 @@ class HomeController {
     try {
       // 与首页一致：服务端拉取默认数据并注入到页面
       const defaultApiUrl = process.env.DEFAULT_SITE || 'https://admin.ycz.me/api/site.index/index';
+      const feedbackUrl = process.env.FEEDBACK_URL || 'https://admin.ycz.me/api/site.index/feedback';
       let defaultData = { categories: [], websites: [], filters: [], searchEngines: [] };
       try {
         const json = await fetchJson(defaultApiUrl);
@@ -91,7 +94,8 @@ class HomeController {
 
       await ctx.render('data-manager', {
         title: '数据管理 - AI网址导航',
-        defaultData
+        defaultData,
+        feedbackUrl
       });
     } catch (error) {
       console.error('渲染数据管理页面失败:', error);
@@ -112,7 +116,8 @@ class HomeController {
       });
       await ctx.render('tools', {
         title: '在线工具 - AI网址导航',
-        currentDateStr
+        currentDateStr,
+        feedbackUrl: process.env.FEEDBACK_URL || 'https://admin.ycz.me/api/site.index/feedback'
       });
     } catch (error) {
       console.error('渲染在线工具页面失败:', error);
@@ -128,7 +133,8 @@ class HomeController {
   async aiChat(ctx) {
     try {
       await ctx.render('ai-chat', {
-        title: 'AI聊天'
+        title: 'AI聊天',
+        feedbackUrl: process.env.FEEDBACK_URL || 'https://admin.ycz.me/api/site.index/feedback'
       });
     } catch (error) {
       console.error('渲染AI聊天页面失败:', error);
@@ -144,7 +150,8 @@ class HomeController {
   async emoji(ctx) {
     try {
       await ctx.render('emoji', {
-        title: 'Emoji图标大全'
+        title: 'Emoji图标大全',
+        feedbackUrl: process.env.FEEDBACK_URL || 'https://admin.ycz.me/api/site.index/feedback'
       });
     } catch (error) {
       console.error('渲染Emoji图标页面失败:', error);

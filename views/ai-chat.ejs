@@ -236,6 +236,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <!-- Chat App -->
   <script type="module" src="/js/ai-chat.js"></script>
+  <script>
+    window.__FEEDBACK_URL__ = '<%= typeof feedbackUrl !== 'undefined' ? feedbackUrl : 'https://admin.ycz.me/api/site.index/feedback' %>';
+  </script>
   <!-- 首次访问弹窗与公告挂件 -->
   <script type="module" src="/js/first-visit.js"></script>
 </body>

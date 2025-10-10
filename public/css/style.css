@@ -2926,6 +2926,88 @@ footer p + p {
 }
 .first-visit-modal .fv-ok:active { transform: translateY(0); }
 
+/* 留言反馈弹窗美化 */
+.first-visit-modal .fv-modal.fv-feedback {
+  max-width: 560px;
+}
+.first-visit-modal .fv-modal.fv-feedback .fv-header::before {
+  content: '💬';
+  background: #e0f2fe;
+  color: #0284c7;
+}
+.first-visit-modal .fv-modal.fv-feedback .fv-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+.first-visit-modal .fv-modal.fv-feedback .fv-body {
+  padding: 16px 22px 8px;
+}
+.first-visit-modal .fv-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.first-visit-modal .fv-form label {
+  display: block;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.first-visit-modal .fv-form input,
+.first-visit-modal .fv-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+.first-visit-modal .fv-form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+.first-visit-modal .fv-form input:focus,
+.first-visit-modal .fv-form textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.first-visit-modal .fv-modal.fv-feedback .fv-footer {
+  padding: 12px 22px 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.first-visit-modal .fb-submit {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  border: 1px solid #3b82f6;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  transition: all 0.2s ease;
+}
+.first-visit-modal .fb-submit:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+.first-visit-modal .fb-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.first-visit-modal .fb-status {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
 .announcement-widget {
   position: fixed; right: 20px; bottom: 20px; z-index: 900;
 }

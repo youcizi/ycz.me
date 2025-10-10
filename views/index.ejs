@@ -16,6 +16,8 @@
     <script>
       // 仅使用 Koa 服务端注入的默认数据，避免重复来源
       window.__DEFAULT_DATA__ = <%- JSON.stringify(typeof defaultData !== 'undefined' ? defaultData : {}) %>;
+      // 注入反馈接口地址（.env优先，其次默认地址）
+      window.__FEEDBACK_URL__ = '<%= typeof feedbackUrl !== 'undefined' ? feedbackUrl : 'https://admin.ycz.me/api/site.index/feedback' %>';
     </script>
     
     <!-- CSS -->
@@ -48,7 +50,7 @@
                 <div class="logo-icon">🧭</div>
                 <div>
                     <div class="logo-text">AI网址导航</div>
-                    <div class="logo-subtitle">快速发现优质AI网站资源</div>
+                    <div class="logo-subtitle">打造专属于自己的网址导航</div>
                 </div>
             </div>
             
