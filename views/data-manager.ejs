@@ -22,6 +22,10 @@
     <!-- Axios CDN -->
     <script src="/js/axios.min.js"></script>
 
+    <!-- 注入服务端默认数据，使“恢复默认”和默认测试在本页可用 -->
+    <script>
+      window.__DEFAULT_DATA__ = <%- JSON.stringify(defaultData || {}) %>;
+    </script>
 </head>
 <body>
     <div id="app">

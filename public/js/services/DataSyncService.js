@@ -167,12 +167,12 @@ class DataSyncService {
     /**
      * 加载默认数据
      */
-    async loadDefaultData() {
+    async loadDefaultData(customUrl) {
         try {
             console.log('开始加载默认数据...');
             
             // 从提供者异步获取默认数据
-            const defaultData = await fetchDefaultData();
+            const defaultData = await fetchDefaultData((customUrl || '').trim() || undefined);
 
             // 先添加默认分类
             const addedCategories = [];
@@ -254,11 +254,11 @@ class DataSyncService {
     /**
      * 重置数据到默认状态
      */
-    async resetToDefault() {
+    async resetToDefault(customUrl) {
         try {
             console.log('重置数据到默认状态...');
             await indexedDBService.clearAllData();
-            await this.loadDefaultData();
+            await this.loadDefaultData((customUrl || '').trim() || undefined);
             console.log('数据重置完成');
             return true;
         } catch (error) {

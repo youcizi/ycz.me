@@ -229,7 +229,8 @@ const DataManagerApp = {
         async testFetchDefaultApi() {
             try {
                 const { fetchDefaultData } = await import('./services/DefaultDataProvider.js');
-                const data = await fetchDefaultData();
+                const url = (this.apiUrlInput || '').trim();
+                const data = await fetchDefaultData(url || undefined);
                 const cats = Array.isArray(data.categories) ? data.categories.length : 0;
                 const sites = Array.isArray(data.websites) ? data.websites.length : 0;
                 const filters = Array.isArray(data.filters) ? data.filters.length : 0;
@@ -503,7 +504,9 @@ const DataManagerApp = {
                     const { default: dataSyncService } = await import('./services/DataSyncService.js');
                     this.dataSync = dataSyncService;
                 }
-                await this.dataSync.resetToDefault();
+                const urlInput = (this.apiUrlInput || '').trim();
+                const effectiveUrl = urlInput || 'https://admin.ycz.me/api/site.index/index';
+                await this.dataSync.resetToDefault(effectiveUrl);
                 this.showStatus('已恢复为默认数据', 'success');
                 await this.loadStats();
             } catch (error) {

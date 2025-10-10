@@ -73,8 +73,25 @@ class HomeController {
    */
   async dataManager(ctx) {
     try {
+      // 与首页一致：服务端拉取默认数据并注入到页面
+      const defaultApiUrl = process.env.DEFAULT_SITE || 'https://admin.ycz.me/api/site.index/index';
+      let defaultData = { categories: [], websites: [], filters: [], searchEngines: [] };
+      try {
+        const json = await fetchJson(defaultApiUrl);
+        const payload = json?.data || json || {};
+        defaultData = {
+          categories: Array.isArray(payload.categories) ? payload.categories : [],
+          websites: Array.isArray(payload.websites) ? payload.websites : [],
+          filters: Array.isArray(payload.filters) ? payload.filters : [],
+          searchEngines: Array.isArray(payload.searchEngines) ? payload.searchEngines : []
+        };
+      } catch (e) {
+        console.warn('默认数据接口获取失败（数据管理页），使用空数据作为回退:', e?.message || e);
+      }
+
       await ctx.render('data-manager', {
-        title: '数据管理 - AI网址导航'
+        title: '数据管理 - AI网址导航',
+        defaultData
       });
     } catch (error) {
       console.error('渲染数据管理页面失败:', error);
