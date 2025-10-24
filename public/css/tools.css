@@ -341,11 +341,45 @@
 /* 作用域覆盖：工具页不使用首页左侧站点侧栏，移除主内容左侧留白 */
 .tools-page .main-content {
   margin-left: 0;
+  overflow-x: hidden; /* 防止移动端横向滚动 */
 }
 
 /* 保证工具页顶栏贴边显示（与首页一致） */
 .tools-page .top-bar {
   left: 0;
+}
+
+/* 移动端适配（工具页） */
+@media (max-width: 768px) {
+  .tools-page .tools-main {
+    grid-template-columns: 1fr; /* 两列改为单列 */
+    gap: 16px;
+    padding: 16px;
+    overflow-x: hidden;
+  }
+  .tools-page .tools-sidebar {
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb; /* 侧栏在下方分隔 */
+  }
+  .tools-page .tools-content {
+    padding: 16px 0 0 0; /* 右侧内容不再需要右间距 */
+  }
+  .tools-page .content-header-row {
+    flex-wrap: wrap; /* 标题和操作在小屏换行 */
+    gap: 8px;
+  }
+  .tools-page .tool-row {
+    flex-wrap: wrap; /* 表单控件自动换行 */
+  }
+  .tools-page .tool-actions {
+    flex-wrap: wrap; /* 操作按钮换行，避免溢出 */
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tools-page .tool-input { min-width: 0; width: 100%; }
+  .tools-page .tool-select { min-width: 0; width: 100%; }
 }
 
 /* 顶部日期下拉触发与日历样式 */
