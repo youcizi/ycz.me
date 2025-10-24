@@ -174,27 +174,105 @@ class DataSyncService {
             // 从提供者异步获取默认数据
             const defaultData = await fetchDefaultData((customUrl || '').trim() || undefined);
 
-            // 先添加默认分类
+            // ========= 分批导入分类，支持 parentId 与 parentName =========
+            const nameToId = new Map();
+            const pending = Array.isArray(defaultData.categories) ? defaultData.categories.map(cat => ({
+                id: cat.id || null,
+                name: cat.name,
+                icon: cat.icon || '📁',
+                color: cat.color || '#3b82f6',
+                description: cat.description || '',
+                order: cat.order || 0,
+                rawParentId: cat.parentId || null,
+                parentName: cat.parentName || cat.parent || null
+            })) : [];
             const addedCategories = [];
-            for (const category of (defaultData.categories || [])) {
-                try {
-                    const addedCategory = await indexedDBService.addCategory(category);
-                    addedCategories.push(addedCategory);
-                    console.log(`添加分类成功: ${category.name}`);
-                } catch (error) {
-                    console.error(`添加分类失败: ${category.name}`, error);
+
+            let safetyCounter = pending.length * 3;
+            while (pending.length > 0 && safetyCounter-- > 0) {
+                const remaining = [];
+                for (const c of pending) {
+                    let parentIdToUse = c.rawParentId;
+                    if (!parentIdToUse && c.parentName && nameToId.has((c.parentName || '').trim())) {
+                        parentIdToUse = nameToId.get((c.parentName || '').trim());
+                    }
+
+                    // 无父级或父级已导入时添加
+                    if (!parentIdToUse || nameToId.has((c.parentName || '').trim()) || c.parentName === null) {
+                        try {
+                            const added = await indexedDBService.addCategory({
+                                id: c.id,
+                                name: (c.name || '').trim(),
+                                parentId: parentIdToUse || null,
+                                icon: c.icon,
+                                color: c.color,
+                                description: c.description,
+                                order: c.order
+                            });
+                            if (added && added.name && added.id) {
+                                nameToId.set(added.name.trim(), added.id);
+                                addedCategories.push(added);
+                                console.log(`添加分类成功: ${added.name}`);
+                            }
+                        } catch (err) {
+                            console.warn(`添加分类失败（待重试）: ${c.name}`, err);
+                            remaining.push(c);
+                        }
+                    } else {
+                        remaining.push(c);
+                    }
+                }
+                pending.length = 0;
+                pending.push(...remaining);
+                if (remaining.length === pending.length && safetyCounter <= 0) {
+                    break;
                 }
             }
+
+            if (pending.length > 0) {
+                const unresolved = pending.map(c => `${c.name} -> parentId: ${c.rawParentId || '无'}, parentName: ${c.parentName || '无'}`).join('; ');
+                console.warn(`部分分类未导入，父级未解析: ${unresolved}`);
+            }
+
+            // 为稳妥起见，合并一次数据库中的分类映射
+            try {
+                const localCategories = await indexedDBService.getCategories();
+                for (const cat of (localCategories || [])) {
+                    if (cat && cat.name && cat.id) {
+                        nameToId.set(cat.name.trim(), cat.id);
+                    }
+                }
+            } catch (mapErr) {
+                console.warn('读取本地分类映射失败:', mapErr);
+            }
             
-            // 再添加默认网站
+            // ========= 导入网站：支持按分类名称映射到分类ID =========
             const addedWebsites = [];
             for (const website of (defaultData.websites || [])) {
+                const title = (website.name || website.title || '').trim();
+                const categoryNameField = (website.categoryName || website.category || website.categoryTitle || '').trim();
+                const resolvedCategoryId = website.categoryId || (categoryNameField ? nameToId.get(categoryNameField) : null);
+                
+                if (!resolvedCategoryId) {
+                    console.warn(`添加网站跳过: ${title || '(未命名)'}，未找到分类映射(${categoryNameField || '无'})`);
+                    continue;
+                }
+                
                 try {
-                    const addedWebsite = await indexedDBService.addWebsite(website);
+                    const addedWebsite = await indexedDBService.addWebsite({
+                        id: website.id,
+                        name: title,
+                        url: (website.url || '').trim(),
+                        categoryId: resolvedCategoryId,
+                        icon: website.icon || '🌐',
+                        description: website.description || '',
+                        paymentType: website.paymentType || '',
+                        order: website.order || 0
+                    });
                     addedWebsites.push(addedWebsite);
-                    console.log(`添加网站成功: ${website.name}`);
+                    console.log(`添加网站成功: ${title}`);
                 } catch (error) {
-                    console.error(`添加网站失败: ${website.name}`, error);
+                    console.error(`添加网站失败: ${title}`, error);
                 }
             }
 

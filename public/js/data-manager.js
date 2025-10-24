@@ -333,51 +333,110 @@ const DataManagerApp = {
                 // 清空现有数据
                 await this.dbService.clearAllData();
                 
-                this.showStatus('正在导入新数据...', 'info');
+                // ========= 分批导入分类（解决父级未先导入导致的失败） =========
+                const incomingCategories = Array.isArray(data.categories) ? data.categories.slice() : [];
+                const nameToId = new Map();
+                const addedIds = new Set();
                 
-                // 直接导入数据
-                let importedWebsites = 0;
-                let importedCategories = 0;
-                let importedFilters = 0;
-                let importedEngines = 0;
-                let skippedDuplicateFilters = 0;
-                let skippedDuplicateEngines = 0;
+                const pending = incomingCategories.map(cat => {
+                    const id = cat.id || this.generateId();
+                    const parentName = cat.parentName || cat.parent || null;
+                    return {
+                        id,
+                        name: cat.name,
+                        icon: cat.icon || '',
+                        color: cat.color || '#3498db',
+                        description: cat.description || '',
+                        order: cat.order || 0,
+                        rawParentId: cat.parentId || null,
+                        parentName
+                    };
+                });
                 
-                // 导入分类数据
-                if (data.categories && data.categories.length > 0) {
-                    for (const category of data.categories) {
-                        await this.dbService.addCategory(category);
-                        importedCategories++;
+                let safetyCounter = pending.length * 3;
+                while (pending.length > 0 && safetyCounter-- > 0) {
+                    const remaining = [];
+                    for (const c of pending) {
+                        let parentIdToUse = c.rawParentId;
+                        if (!parentIdToUse && c.parentName && nameToId.has(c.parentName)) {
+                            parentIdToUse = nameToId.get(c.parentName);
+                        }
+
+                        // 无父级或父级已导入时添加
+                        if (!parentIdToUse || addedIds.has(parentIdToUse)) {
+                            try {
+                                const added = await this.dbService.addCategory({
+                                    id: c.id,
+                                    name: c.name,
+                                    parentId: parentIdToUse || null,
+                                    icon: c.icon,
+                                    color: c.color,
+                                    description: c.description,
+                                    order: c.order
+                                });
+                                nameToId.set(added.name, added.id);
+                                addedIds.add(added.id);
+                            } catch (err) {
+                                console.warn(`导入分类失败: ${c.name}`, err);
+                                // 保留到下一轮尝试
+                                remaining.push(c);
+                            }
+                        } else {
+                            remaining.push(c);
+                        }
+                    }
+                    // 更新待处理队列
+                    pending.length = 0;
+                    pending.push(...remaining);
+
+                    // 如果这一轮没有减少数量且还有待处理项，提前退出避免死循环
+                    if (remaining.length === pending.length && safetyCounter <= 0) {
+                        break;
                     }
                 }
+
+                if (pending.length > 0) {
+                    const unresolved = pending.map(c => `${c.name} -> parentId: ${c.rawParentId || '无'}, parentName: ${c.parentName || '无'}`).join('; ');
+                    throw new Error(`导入失败: 存在未解析的父级分类引用 (${unresolved})`);
+                }
                 
-                // 导入网站数据
+                // ========= 导入网站（支持按分类名称映射到ID） =========
                 if (data.websites && data.websites.length > 0) {
                     for (const website of data.websites) {
-                        // 标准化网站数据格式
-                        const websiteData = {
-                            ...website,
-                            name: website.name || website.title, // 兼容title字段
-                            id: website.id || this.generateId()
-                        };
+                        const name = website.name || website.title;
+                        const categoryNameField = website.categoryName || website.category || website.categoryTitle || '';
+                        const resolvedCategoryId = website.categoryId || (categoryNameField ? nameToId.get(categoryNameField) : null);
+                        
+                        if (!resolvedCategoryId) {
+                            console.warn(`导入网站跳过: ${name}，未找到分类映射`);
+                            continue;
+                        }
                         
                         try {
-                            await this.dbService.addWebsite(websiteData);
-                            importedWebsites++;
+                            await this.dbService.addWebsite({
+                                id: website.id || this.generateId(),
+                                name,
+                                url: website.url,
+                                categoryId: resolvedCategoryId,
+                                icon: website.icon || '',
+                                description: website.description || '',
+                                paymentType: website.paymentType || 'free',
+                                order: website.order || 0
+                            });
                         } catch (error) {
-                            console.warn(`导入网站失败: ${websiteData.name}`, error);
-                            // 继续导入其他网站
+                            console.warn(`导入网站失败: ${name}`, error);
                         }
                     }
                 }
 
-                // 导入筛选标签（按 key 去重）
+                // 导入筛选标签（按 key 去重，并在重复时更新）
                 if (data.filters && data.filters.length > 0) {
                     const seenKeys = new Set();
                     for (const tag of data.filters) {
                         const keyLower = (tag.key || '').trim().toLowerCase();
-                        if (!keyLower) continue;
-                        if (seenKeys.has(keyLower)) { skippedDuplicateFilters++; continue; }
+                        const nameLower = (tag.name || '').trim();
+                        if (!keyLower || !nameLower) continue;
+                        if (seenKeys.has(keyLower)) continue;
                         seenKeys.add(keyLower);
 
                         const tagData = {
@@ -389,35 +448,28 @@ const DataManagerApp = {
                         };
                         try {
                             await this.dbService.addFilter(tagData);
-                            importedFilters++;
                         } catch (error) {
-                            // 如果因重复 key 失败，尝试更新现有标签
-                            if (String(error.message || '').includes('key 已存在')) {
-                                try {
-                                    const existingFilters = await this.dbService.getFilters();
-                                    const exist = existingFilters.find(f => (f.key || '').toLowerCase() === keyLower);
-                                    if (exist) {
-                                        await this.dbService.updateFilter({ ...exist, ...tagData, id: exist.id });
-                                        importedFilters++;
-                                    }
-                                } catch (e2) {
-                                    console.warn(`更新筛选标签失败: ${tagData.name}`, e2);
+                            if (String(error.message || '').includes('已存在')) {
+                                const existingFilters = await this.dbService.getFilters();
+                                const exist = existingFilters.find(f => (f.key || '').toLowerCase() === keyLower);
+                                if (exist) {
+                                    await this.dbService.updateFilter({ ...exist, ...tagData, id: exist.id });
                                 }
                             } else {
-                                console.warn(`导入筛选标签失败: ${tagData.name}`, error);
+                                throw error;
                             }
                         }
                     }
                 }
 
-                // 导入搜索引擎（按名称去重）
+                // 导入搜索引擎（按名称去重，并在重复时更新）
                 if (data.searchEngines && data.searchEngines.length > 0) {
                     const seenNames = new Set();
                     for (const engine of data.searchEngines) {
                         const nameLower = (engine.name || '').trim().toLowerCase();
                         const template = (engine.template || '').trim();
                         if (!nameLower || !template) continue;
-                        if (seenNames.has(nameLower)) { skippedDuplicateEngines++; continue; }
+                        if (seenNames.has(nameLower)) continue;
                         seenNames.add(nameLower);
 
                         const engineData = {
@@ -428,37 +480,28 @@ const DataManagerApp = {
                         };
                         try {
                             await this.dbService.addSearchEngine(engineData);
-                            importedEngines++;
                         } catch (error) {
-                            // 如果因为名称重复失败，尝试更新现有的同名引擎
                             if (String(error.message || '').includes('名称已存在')) {
-                                try {
-                                    const existingEngines = await this.dbService.getSearchEngines();
-                                    const exist = existingEngines.find(e => (e.name || '').toLowerCase() === nameLower);
-                                    if (exist) {
-                                        await this.dbService.updateSearchEngine({ ...exist, ...engineData, id: exist.id });
-                                        importedEngines++;
-                                    }
-                                } catch (e2) {
-                                    console.warn(`更新搜索引擎失败: ${engineData.name}`, e2);
+                                const existingEngines = await this.dbService.getSearchEngines();
+                                const exist = existingEngines.find(e => (e.name || '').toLowerCase() === nameLower);
+                                if (exist) {
+                                    await this.dbService.updateSearchEngine({ ...exist, ...engineData, id: exist.id });
                                 }
                             } else {
-                                console.warn(`导入搜索引擎失败: ${engineData.name}`, error);
+                                throw error;
                             }
                         }
                     }
                 }
                 
-                // 更新统计信息
+                this.showStatus('数据导入成功！', 'success');
+                
+                // 刷新统计数据和预览
                 await this.loadStats();
+                this.previewData = null;
+                this.selectedFile = null;
                 
-                this.showStatus(`导入成功！导入了 ${importedWebsites} 个网站，${importedCategories} 个分类，${importedFilters} 个筛选标签（去重跳过 ${skippedDuplicateFilters}），${importedEngines} 个搜索引擎（去重跳过 ${skippedDuplicateEngines}）。正在刷新页面...`, 'success');
-                this.clearFile();
-                
-                // 重置警告状态
-                this.importWarningShown = false;
-                
-                // 刷新页面显示
+                // 刷新页面数据
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
@@ -1191,33 +1234,99 @@ const DataManagerApp = {
                 // 清空现有数据
                 await this.dbService.clearAllData();
                 
-                // 导入新数据
-                if (data.categories && data.categories.length > 0) {
-                    for (const category of data.categories) {
-                        await this.dbService.addCategory({
-                            id: category.id || this.generateId(),
-                            name: category.name,
-                            parentId: category.parentId || null,
-                            icon: category.icon || '',
-                            color: category.color || '#3498db',
-                            description: category.description || '',
-                            order: category.order || 0
-                        });
+                // ========= 分批导入分类（解决父级未先导入导致的失败） =========
+                const incomingCategories = Array.isArray(data.categories) ? data.categories.slice() : [];
+                const nameToId = new Map();
+                const addedIds = new Set();
+                
+                const pending = incomingCategories.map(cat => {
+                    const id = cat.id || this.generateId();
+                    const parentName = cat.parentName || cat.parent || null;
+                    return {
+                        id,
+                        name: cat.name,
+                        icon: cat.icon || '',
+                        color: cat.color || '#3498db',
+                        description: cat.description || '',
+                        order: cat.order || 0,
+                        rawParentId: cat.parentId || null,
+                        parentName
+                    };
+                });
+                
+                let safetyCounter = pending.length * 3;
+                while (pending.length > 0 && safetyCounter-- > 0) {
+                    const remaining = [];
+                    for (const c of pending) {
+                        let parentIdToUse = c.rawParentId;
+                        if (!parentIdToUse && c.parentName && nameToId.has(c.parentName)) {
+                            parentIdToUse = nameToId.get(c.parentName);
+                        }
+
+                        // 无父级或父级已导入时添加
+                        if (!parentIdToUse || addedIds.has(parentIdToUse)) {
+                            try {
+                                const added = await this.dbService.addCategory({
+                                    id: c.id,
+                                    name: c.name,
+                                    parentId: parentIdToUse || null,
+                                    icon: c.icon,
+                                    color: c.color,
+                                    description: c.description,
+                                    order: c.order
+                                });
+                                nameToId.set(added.name, added.id);
+                                addedIds.add(added.id);
+                            } catch (err) {
+                                console.warn(`导入分类失败: ${c.name}`, err);
+                                // 保留到下一轮尝试
+                                remaining.push(c);
+                            }
+                        } else {
+                            remaining.push(c);
+                        }
+                    }
+                    // 更新待处理队列
+                    pending.length = 0;
+                    pending.push(...remaining);
+
+                    // 如果这一轮没有减少数量且还有待处理项，提前退出避免死循环
+                    if (remaining.length === pending.length && safetyCounter <= 0) {
+                        break;
                     }
                 }
+
+                if (pending.length > 0) {
+                    const unresolved = pending.map(c => `${c.name} -> parentId: ${c.rawParentId || '无'}, parentName: ${c.parentName || '无'}`).join('; ');
+                    throw new Error(`导入失败: 存在未解析的父级分类引用 (${unresolved})`);
+                }
                 
+                // ========= 导入网站（支持按分类名称映射到ID） =========
                 if (data.websites && data.websites.length > 0) {
                     for (const website of data.websites) {
-                        await this.dbService.addWebsite({
-                            id: website.id || this.generateId(),
-                            name: website.name || website.title,
-                            url: website.url,
-                            categoryId: website.categoryId || null,
-                            icon: website.icon || '',
-                            description: website.description || '',
-                            paymentType: website.paymentType || 'free',
-                            order: website.order || 0
-                        });
+                        const name = website.name || website.title;
+                        const categoryNameField = website.categoryName || website.category || website.categoryTitle || '';
+                        const resolvedCategoryId = website.categoryId || (categoryNameField ? nameToId.get(categoryNameField) : null);
+                        
+                        if (!resolvedCategoryId) {
+                            console.warn(`导入网站跳过: ${name}，未找到分类映射`);
+                            continue;
+                        }
+                        
+                        try {
+                            await this.dbService.addWebsite({
+                                id: website.id || this.generateId(),
+                                name,
+                                url: website.url,
+                                categoryId: resolvedCategoryId,
+                                icon: website.icon || '',
+                                description: website.description || '',
+                                paymentType: website.paymentType || 'free',
+                                order: website.order || 0
+                            });
+                        } catch (error) {
+                            console.warn(`导入网站失败: ${name}`, error);
+                        }
                     }
                 }
 
@@ -1226,7 +1335,8 @@ const DataManagerApp = {
                     const seenKeys = new Set();
                     for (const tag of data.filters) {
                         const keyLower = (tag.key || '').trim().toLowerCase();
-                        if (!keyLower) continue;
+                        const nameLower = (tag.name || '').trim();
+                        if (!keyLower || !nameLower) continue;
                         if (seenKeys.has(keyLower)) continue;
                         seenKeys.add(keyLower);
 
@@ -1240,7 +1350,7 @@ const DataManagerApp = {
                         try {
                             await this.dbService.addFilter(tagData);
                         } catch (error) {
-                            if (String(error.message || '').includes('key 已存在')) {
+                            if (String(error.message || '').includes('已存在')) {
                                 const existingFilters = await this.dbService.getFilters();
                                 const exist = existingFilters.find(f => (f.key || '').toLowerCase() === keyLower);
                                 if (exist) {
@@ -1305,7 +1415,7 @@ const DataManagerApp = {
                 this.importWarningShown = false;
             }
         },
-        
+
         // 获取状态图标
         getStatusIcon(type) {
             const icons = {
