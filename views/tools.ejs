@@ -11,8 +11,19 @@
     <link rel="stylesheet" href="/css/style.css">
     <!-- 工具页样式 -->
     <link rel="stylesheet" href="/css/tools.css">
+	<!-- Google Tag Manager -->
+	<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+	new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+	j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+	'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+	})(window,document,'script','dataLayer','GTM-556X699R');</script>
+<!-- End Google Tag Manager -->
 </head>
 <body>
+	<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-556X699R"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
   <div id="app" class="app-container tools-page" v-cloak>
         <!-- 顶部导航栏（与首页一致的风格） -->
         <main class="main-content">
@@ -227,9 +238,6 @@
     <script src="https://cdn.jsdelivr.net/npm/csso@5.0.5/dist/csso.min.js"></script>
     <!-- 工具页应用脚本 -->
     <script src="/js/tools-app.js"></script>
-    <script>
-      window.__FEEDBACK_URL__ = '<%= typeof feedbackUrl !== 'undefined' ? feedbackUrl : 'https://admin.ycz.me/api/site.index/feedback' %>';
-    </script>
     <!-- 首次访问弹窗与公告挂件 -->
     <script type="module" src="/js/first-visit.js"></script>
 </body>
