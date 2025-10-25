@@ -328,7 +328,10 @@ body {
   color: #4f46e5;
   background: #f3f4f6;
 }
-
+.nav-link.active {
+  background: #4f46e5;
+  color: #f3f4f6;
+}
 .top-actions {
   display: flex;
   align-items: center;

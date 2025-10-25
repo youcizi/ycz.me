@@ -122,11 +122,12 @@ const app = Vue.createApp({
       const vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
       const topBar = appEl.querySelector('.top-bar');
       const topBarH = topBar ? topBar.offsetHeight : 0;
+      const targetH = Math.max(0, vh - topBarH);
 
-      // 设置主内容区 note-main 的确切高度，避免整页滚动
+      // 仅设置 note-main 的高度，避免整页滚动；不再强制 main-content 高度与隐藏溢出
       const noteMain = appEl.querySelector('.note-main');
       if (noteMain) {
-        noteMain.style.height = Math.max(0, vh - topBarH) + 'px';
+        noteMain.style.height = targetH + 'px';
       }
 
       // 计算右侧内容区的可用高度（扣除内容头部和内边距）
@@ -139,8 +140,12 @@ const app = Vue.createApp({
         paddingTB = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
       }
 
-      // 可用高度
-      const available = Math.max(120, (noteMain ? noteMain.clientHeight : (vh - topBarH)) - contentHeaderH - paddingTB);
+      // 可用高度与滚动控制：让内容区自身滚动，确保底部操作（如“保存”按钮）可见
+      const available = Math.max(120, (noteMain ? noteMain.clientHeight : targetH) - contentHeaderH - paddingTB);
+      if (noteContent) {
+        noteContent.style.maxHeight = available + 'px';
+        noteContent.style.overflow = 'auto';
+      }
 
       // 左侧列表与右侧编辑器的高度设置
       const editor = appEl.querySelector('.note-editor');
