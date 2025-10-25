@@ -159,6 +159,54 @@ class HomeController {
       ctx.body = { success: false, message: '服务器内部错误' };
     }
   }
+
+  /**
+   * 渲染在线笔记数据管理页面
+   * @param {Object} ctx Koa上下文对象
+   */
+  async noteManager(ctx) {
+    try {
+      const noteDefaultApiUrl = process.env.NOTE_DEFAULT_API || 'https://admin.ycz.me/api/site.index/note';
+      let defaultNoteData = { categories: [], notes: [] };
+      try {
+        const json = await fetchJson(noteDefaultApiUrl);
+        const payload = json?.data || json || {};
+        defaultNoteData = {
+          categories: Array.isArray(payload.categories) ? payload.categories : [],
+          notes: Array.isArray(payload.notes) ? payload.notes : []
+        };
+      } catch (e) {
+        console.warn('默认笔记接口获取失败（笔记数据管理页），使用空数据作为回退:', e?.message || e);
+      }
+      await ctx.render('note-manager', {
+        title: '在线笔记数据管理',
+        defaultNoteData,
+        noteDefaultApiUrl,
+        feedbackUrl: process.env.FEEDBACK_URL || 'https://admin.ycz.me/api/site.index/feedback'
+      });
+    } catch (error) {
+      console.error('渲染在线笔记数据管理页面失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
+
+  /**
+   * 渲染在线笔记页面
+   * @param {Object} ctx Koa上下文对象
+   */
+  async note(ctx) {
+    try {
+      await ctx.render('note', {
+        title: '在线笔记',
+        feedbackUrl: process.env.FEEDBACK_URL || 'https://admin.ycz.me/api/site.index/feedback'
+      });
+    } catch (error) {
+      console.error('渲染在线笔记页面失败:', error);
+      ctx.status = 500;
+      ctx.body = { success: false, message: '服务器内部错误' };
+    }
+  }
 }
 
 module.exports = HomeController;

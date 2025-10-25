@@ -28,6 +28,10 @@ router.get('/ai-chat', homeController.aiChat.bind(homeController));
 // Emoji图标页面路由
 router.get('/emoji', homeController.emoji.bind(homeController));
 
+// 在线笔记页面路由
+router.get('/note-manager', homeController.noteManager.bind(homeController));
+router.get('/note', homeController.note.bind(homeController));
+
 // API路由
 router.get('/api/websites/:category', apiController.getWebsitesByCategory.bind(apiController));
 router.get('/api/search', apiController.searchWebsites.bind(apiController));
