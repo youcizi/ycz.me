@@ -1,0 +1,102 @@
+/* 在线笔记页样式：复用工具页的结构风格 */
+
+.note-main {
+  background: #f8f8f8;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 260px 1fr; /* 左侧分类 + 右侧内容 */
+  gap: 20px;
+}
+
+.note-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  border-radius: 0;
+  padding: 12px 8px;
+}
+
+.note-title { font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 10px; }
+
+.note-cat-list { list-style: none; }
+.note-cat-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px; color: #374151; cursor: pointer;
+  transition: all 0.2s ease; position: relative;
+}
+.note-cat-item:hover { background: #f3f4f6; }
+.note-cat-item.active { background: #eff6ff; border: 1px solid #c7d2fe; color: #4f46e5; }
+.cat-icon { width: 20px; text-align: center; }
+.cat-actions { margin-left: auto; display: flex; gap: 6px; }
+.action-btn { background: transparent; border: none; cursor: pointer; color: #6b7280; }
+.action-btn.danger { color: #ef4444; }
+
+.note-content { background: #ffffff; padding: 16px; border-radius: 8px; }
+
+.content-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.content-title { font-size: 18px; font-weight: 600; color: #1f2937; }
+
+.note-layout-two-cols { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+.note-list { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; }
+
+/* 复用工具列表项样式 */
+.tools-list { list-style: none; }
+.tools-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; color:#374151; cursor:pointer; transition: all .2s ease; position:relative; }
+.tools-item:hover { background:#f3f4f6; }
+.tools-item.active { background:#eff6ff; border:1px solid #c7d2fe; color:#4f46e5; }
+.tool-icon { width:22px; text-align:center; font-size:18px; }
+.tool-name { flex:1; font-size:14px; }
+.item-ellipsis { margin-left:auto; background:transparent; border:none; color:#6b7280; font-size:18px; cursor:pointer; opacity:0; transition:opacity .2s; }
+.tools-item:hover .item-ellipsis { opacity:1; }
+.item-menu { position:absolute; right:8px; top:8px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.12); padding:8px; display:flex; flex-direction:column; gap:6px; z-index:20; min-width:120px; }
+.menu-close { align-self:flex-end; background:transparent; border:none; color:#6b7280; font-size:16px; line-height:1; cursor:pointer; }
+.menu-item { background:#f9fafb; border:1px solid #e5e7eb; color:#374151; font-size:13px; border-radius:6px; padding:6px 10px; cursor:pointer; }
+.menu-item:hover { background:#f3f4f6; }
+.menu-item.danger { color:#ef4444; border-color:#fca5a5; }
+
+/* 编辑器区域 */
+.note-editor { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:16px; }
+.tool-row { display:flex; align-items:center; gap:10px; }
+.tool-row.column { flex-direction:column; align-items:stretch; }
+.tool-label { color:#374151; font-size:13px; min-width:72px; }
+.tool-input, .tool-select { height:34px; padding:6px 10px; background:#ffffff; border:1px solid #d1d5db; border-radius:6px; color:#374151; font-size:13px; outline:none; transition:all .2s ease; }
+.tool-input { flex:1; min-width:220px; }
+.tool-input:focus, .tool-select:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
+.tool-textarea { width:100%; padding:10px 12px; background:#ffffff; border:1px solid #d1d5db; border-radius:8px; color:#374151; font-size:13px; outline:none; }
+.tool-textarea:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
+.tool-actions { display:flex; align-items:center; gap:10px; margin-top:10px; }
+.tool-btn { height:32px; padding:6px 12px; border-radius:6px; border:1px solid #d1d5db; background:#fff; color:#374151; cursor:pointer; }
+.tool-btn.primary { background:#3b82f6; border-color:#3b82f6; color:#fff; }
+.tool-btn.ghost { background:transparent; }
+
+/* 响应式：窄屏单列 */
+@media (max-width: 768px) {
+  .note-main { grid-template-columns: 1fr; }
+  .note-layout-two-cols { grid-template-columns: 1fr; }
+}
+
+/* 页面级覆盖：移除全局侧边栏造成的左侧空白，仅作用于 note 页面 */
+.note-page .main-content { margin-left: 0; overflow: hidden; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* 让 note-main 充满剩余空间 */
+.note-page .note-main { flex: 1; }
+.note-page .note-sidebar, .note-page .note-content { height: 100%; }
+.note-page .note-layout-two-cols { height: 100%; }
+.note-page .note-list { height: 100%; overflow: auto; }
+.note-page .note-editor { height: 100%; display: flex; flex-direction: column; }
+
+/* Markdown 编辑器（EasyMDE）微调，仅限 note 页面 */
+.note-page .note-editor .EasyMDEContainer { width: 100%; flex: 1 1 auto; display: flex; flex-direction: column; }
+.note-page .note-editor .editor-toolbar { border-radius: 6px 6px 0 0; }
+.note-page .note-editor .CodeMirror,
+.note-page .note-editor .editor-preview { flex: 1 1 auto; min-height: 0; }
+
+/* 侧栏收缩按钮 */
+.note-collapse-btn { float: right; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.note-collapse-btn:hover { background: #e5e7eb; }
+
+/* 收缩状态：仅影响 note 页面 */
+.note-page.note-collapsed .note-main { grid-template-columns: 72px 1fr !important; }
+.note-page.note-collapsed .note-sidebar { padding: 8px 6px; }
+.note-page.note-collapsed .note-cat-item { gap: 6px; padding: 6px 8px; }
+.note-page.note-collapsed .cat-name, .note-page.note-collapsed .cat-actions { display: none; }
+.note-page.note-collapsed .note-title { display: flex; align-items: center; justify-content: space-between; }

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <meta name="description" content="在线笔记数据管理，支持JSON导入导出与接口配置">
+  <meta name="keywords" content="在线笔记, 数据管理, 导入导出, JSON">
+
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/data-manager.css">
+
+  <script src="/js/vue.global.js"></script>
+  <script src="/js/axios.min.js"></script>
+
+</head>
+<body class="note-manager-page">
+  
+  <div id="app">
+    <!-- 顶部导航栏 -->
+    <div class="top-bar">
+      <div class="top-nav-links">
+        <a href="/" class="nav-link">返回首页</a>
+        <a href="/note" class="nav-link">在线笔记</a>
+        <span class="nav-link active">笔记数据管理</span>
+        <a href="/ai-chat" class="nav-link">AI聊天</a>
+        <a href="/emoji" class="nav-link">Emoji图标</a>
+        <a href="/data-manager" class="nav-link">数据管理</a>
+      </div>
+    </div>
+
+    <main class="data-manager-main">
+      <div class="data-manager-container">
+        <div class="page-header">
+          <h1>
+            <i class="fas fa-database"></i>
+            在线笔记数据管理
+          </h1>
+          <p class="page-description" style="color: #fff;">独立管理笔记分类与笔记数据，支持默认接口、JSON导入导出与可选同步</p>
+        </div>
+
+        <div class="main-content" style="margin-left:0;">
+          <!-- 状态消息 -->
+          <div v-if="statusMessage" class="status-message" :class="statusMessage.type">
+            <i class="status-icon" :class="getStatusIcon(statusMessage.type)"></i>
+            <span class="status-text">{{ statusMessage.text }}</span>
+          </div>
+
+          <!-- 统计信息 -->
+          <div class="action-section">
+            <div class="import-section">
+              <div class="section-header">
+                <h3><i class="fas fa-chart-bar"></i> 当前数据统计</h3>
+                <p class="section-desc">页内仅统计当前页面的在线笔记本地库</p>
+              </div>
+              <div class="file-info" style="display:flex; gap:14px; flex-wrap:wrap;">
+                <div class="stat-chip">分类：{{ categoryCount }}</div>
+                <div class="stat-chip">笔记：{{ noteCount }}</div>
+              </div>
+            </div>
+          
+
+          <!-- 默认API管理（仅限笔记） -->
+          
+            <div class="import-section">
+              <div class="section-header">
+                <h3><i class="fas fa-link"></i> 默认接口管理（笔记）</h3>
+                <p class="section-desc">初始化/恢复默认时，用于拉取“笔记+分类”的默认数据</p>
+              </div>
+              <div class="file-info" style="display:block;">
+                <div class="file-meta" style="width:100%;">
+                  <label for="apiUrlInput">自定义笔记默认API地址</label>
+                  <input id="apiUrlInput" type="text" v-model="apiUrlInput" placeholder="例如：https://your.domain/api/site.index/note" style="width:100%;padding:10px;margin-top:6px;">
+                  <div class="file-actions" style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-primary" @click="saveApiUrl"><i class="fas fa-save btn-icon"></i> 保存</button>
+                    <button class="btn btn-outline" @click="clearApiUrl"><i class="fas fa-eraser btn-icon"></i> 清除</button>
+                    <span class="hint" style="color:#6b7280;">生效：{{ effectiveApiLabel }}</span>
+                  </div>
+                  <details style="margin-top:12px;">
+                    <summary>默认接口返回结构说明</summary>
+                    <div style="margin-top:8px;">
+                      <pre style="white-space:pre-wrap;background:#f8f8f8;padding:10px;border-radius:6px;">{
+  "categories": [ { "id": "string", "name": "string", "icon": "string" } ],
+  "notes": [ { "id": "string", "title": "string", "content": "string", "categoryId": "string" } ]
+}</pre>
+                      <p>说明：无需前端适配，请确保字段与结构严格匹配。</p>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 导入导出（JSON） -->
+          <div class="action-section">
+            <div class="export-section">
+              <div class="section-header">
+                <h3><i class="fas fa-file-import"></i> 导入/导出</h3>
+                <p class="section-desc">支持JSON导入导出，仅作用于在线笔记本地库</p>
+              </div>
+              <div class="file-info" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+                <label class="btn btn-outline" style="cursor:pointer;">
+                  <i class="fas fa-file-upload btn-icon"></i> 选择JSON导入
+                  <input type="file" accept="application/json" style="display:none;" @change="onImportJson">
+                </label>
+                <button class="btn btn-primary" @click="exportJson"><i class="fas fa-download btn-icon"></i> 导出JSON</button>
+                <button class="btn btn-secondary" @click="resetToDefault"><i class="fas fa-undo btn-icon"></i> 恢复默认</button>
+              </div>
+              <div v-if="previewData" class="preview-box" style="margin-top:12px;">
+                <h4>导入预览</h4>
+                <pre style="white-space:pre-wrap;background:#f8f8f8;padding:10px;border-radius:6px;">{{ previewJson }}</pre>
+              </div>
+            </div>
+         
+
+          <!-- 同步到后台（可选） -->
+          
+            <div class="export-section">
+              <div class="section-header">
+                <h3><i class="fas fa-sync-alt"></i> 同步到后台（可选）</h3>
+                <p class="section-desc">POST JSON 到自定义同步接口，仅限笔记</p>
+              </div>
+              <div class="file-info" style="display:block;">
+                <div class="file-meta" style="width:100%;">
+                  <label for="syncApiUrlInput">同步API地址</label>
+                  <input id="syncApiUrlInput" type="text" v-model="syncApiUrlInput" placeholder="例如：https://your.domain/api/site.index/note.sync" style="width:100%;padding:10px;margin-top:6px;">
+                  <div class="file-actions" style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-primary" @click="saveSyncUrl"><i class="fas fa-save btn-icon"></i> 保存</button>
+                    <button class="btn btn-outline" @click="clearSyncUrl"><i class="fas fa-eraser btn-icon"></i> 清除</button>
+                    <span class="hint" style="color:#6b7280;">生效：{{ effectiveSyncLabel }}</span>
+                  </div>
+                  <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                    <button class="btn btn-secondary" :disabled="isSyncing" @click="syncToBackend"><i class="fas fa-sync btn-icon"></i> 同步本地笔记JSON到后台</button>
+                    <span v-if="isSyncing" class="hint">同步中...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>window.__NOTE_DEFAULT_API__ = '<%= noteDefaultApiUrl %>';</script>
+  <script>window.__DEFAULT_NOTE_DATA__ = <%- JSON.stringify(defaultNoteData || {}) %>;</script>
+  <script src="/js/note-manager.js"></script>
+</body>
+</html>
