@@ -166,7 +166,7 @@ class HomeController {
    */
   async noteManager(ctx) {
     try {
-      const noteDefaultApiUrl = process.env.NOTE_DEFAULT_API || 'https://admin.ycz.me/api/site.index/note';
+      const noteDefaultApiUrl = process.env.NOTE_DEFAULT_API || 'https://admin.ycz.me/api/site.note/index';
       let defaultNoteData = { categories: [], notes: [] };
       try {
         const json = await fetchJson(noteDefaultApiUrl);
