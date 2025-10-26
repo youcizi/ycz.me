@@ -48,6 +48,35 @@
         if(type === 'error') return 'fas fa-times-circle';
         return 'fas fa-info-circle';
       },
+      // 通用确认（优先使用自定义弹窗）
+      confirmAction: async function(message, title){
+        try {
+          if (typeof window !== 'undefined' && window.CustomModal && typeof CustomModal.showConfirm === 'function') {
+            const ok = await CustomModal.showConfirm(message, title || '确认操作');
+            return !!ok;
+          }
+        } catch (_) {}
+        return window.confirm(message);
+      },
+      // 覆盖本地 IndexedDB 的笔记库
+      overwriteLocalNotes: async function(cats, notes){
+        const mod = await import('./services/NotesDBService.js');
+        const NotesDBService = mod && (mod.default || mod.NotesDBService);
+        if (!NotesDBService) throw new Error('NotesDBService 未找到');
+        const db = new NotesDBService();
+        await db.init();
+        // 清空现有数据
+        try {
+          const oldNotes = await db.getNotes();
+          for (const n of (oldNotes || [])) { try { await db.deleteNote(n.id); } catch(e){} }
+        } catch(e) { console.warn('清空笔记失败', e); }
+        try {
+          const oldCats = await db.getCategories();
+          for (const c of (oldCats || [])) { try { await db.deleteCategory(c.id); } catch(e){} }
+        } catch(e) { console.warn('清空分类失败', e); }
+        // 导入新数据
+        await db.importAll({ categories: Array.isArray(cats) ? cats : [], notes: Array.isArray(notes) ? notes : [] });
+      },
       setMessage: function(type, text){
         var self = this;
         self.statusMessage = { type: type, text: text };
@@ -67,15 +96,20 @@
       resetToDefault: async function(){
         var url = readLocal('noteManager.customDefaultApiUrl', (typeof window !== 'undefined' ? (window.__NOTE_DEFAULT_API__ || '') : ''));
         if(!url){ this.setMessage('error','未配置默认接口地址'); return; }
+        const ok = await this.confirmAction('此操作将清空本地笔记库并写入默认数据，是否继续？','恢复默认数据');
+        if (!ok) return;
         try {
           var resp = await axios.get(url, { timeout: 8000 });
           var dataObj = (resp && resp.data && (resp.data.data || resp.data)) || {};
           var cats = Array.isArray(dataObj.categories) ? dataObj.categories : [];
           var notes = Array.isArray(dataObj.notes) ? dataObj.notes : [];
+          // 覆盖写入 IndexedDB
+          await this.overwriteLocalNotes(cats, notes);
+          // 更新页面状态与预览
           this.categories = cats;
           this.notes = notes;
           this.previewData = { categories: cats, notes: notes };
-          this.setMessage('success','已从默认接口恢复笔记数据');
+          this.setMessage('success','已从默认接口恢复并覆盖本地数据');
         } catch (e) {
           this.setMessage('error', '恢复默认失败：' + (e && e.message ? e.message : e));
         }
@@ -84,14 +118,19 @@
         try {
           var file = evt && evt.target && evt.target.files && evt.target.files[0];
           if(!file){ return; }
+          const ok = await this.confirmAction('导入将覆盖本地笔记库，是否继续？','导入并覆盖');
+          if (!ok) { evt.target.value = ''; return; }
           var text = await file.text();
           var obj = JSON.parse(text);
           var cats = Array.isArray(obj && obj.categories) ? obj.categories : [];
           var notes = Array.isArray(obj && obj.notes) ? obj.notes : [];
+          // 覆盖写入 IndexedDB
+          await this.overwriteLocalNotes(cats, notes);
+          // 更新页面状态与预览
           this.categories = cats;
           this.notes = notes;
           this.previewData = { categories: cats, notes: notes };
-          this.setMessage('success','已导入：分类' + cats.length + '，笔记' + notes.length);
+          this.setMessage('success','已导入并覆盖：分类' + cats.length + '，笔记' + notes.length);
           evt.target.value = '';
         } catch(e){
           this.setMessage('error','导入失败：' + (e && e.message ? e.message : e));
