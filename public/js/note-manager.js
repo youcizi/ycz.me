@@ -134,7 +134,28 @@
         if(!url){ this.setMessage('error','未设置同步API地址'); return; }
         try {
           this.isSyncing = true;
-          var payload = { categories: this.categories || [], notes: this.notes || [] };
+          var payload = null;
+          // 优先从 IndexedDB 读取真实数据
+          try {
+            const mod = await import('./services/NotesDBService.js');
+            const NotesDBService = mod && (mod.default || mod.NotesDBService);
+            if (NotesDBService) {
+              const db = new NotesDBService();
+              await db.init();
+              const [cats, notes] = await Promise.all([db.getCategories(), db.getNotes()]);
+              if ((Array.isArray(cats) && cats.length > 0) || (Array.isArray(notes) && notes.length > 0)) {
+                payload = { categories: cats || [], notes: notes || [] };
+                this.previewData = payload; // 在页面“预览数据”中可见
+              }
+            }
+          } catch (e) {
+            // 读取 IndexedDB 失败则回退到页面当前数据
+            console.warn('读取 IndexedDB 失败，使用页面数据回退：', e);
+          }
+          if (!payload) {
+            payload = { categories: this.categories || [], notes: this.notes || [] };
+          }
+
           var resp = await axios.post(url, payload, { headers: { 'Content-Type': 'application/json' }, timeout: 12000 });
           var ok = resp && resp.status >= 200 && resp.status < 300;
           this.setMessage(ok ? 'success' : 'error', ok ? '同步成功' : ('同步失败：' + (resp && resp.status)));
