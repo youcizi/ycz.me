@@ -37,6 +37,73 @@ const app = Vue.createApp({
     }
   },
   methods: {
+    // 安全设置编辑器内容：避免 ProseMirror 事务冲突，如失败则重建编辑器
+    setEditorContentSafe(content) {
+      const editor = this.mdEditor;
+      const text = content || '';
+      // 若编辑器未就绪，直接重建
+      if (!editor || typeof editor.setMarkdown !== 'function') {
+        this.recreateEditor(text);
+        return;
+      }
+      // 保证在 Markdown 模式下设置内容
+      try {
+        if (typeof editor.isMarkdownMode === 'function' && !editor.isMarkdownMode()) {
+          editor.changeMode('markdown');
+        }
+      } catch (_) {}
+
+      const doSet = () => {
+        try {
+          editor.setMarkdown(text, false);
+        } catch (err) {
+          const msg = String((err && err.message) || '');
+          // 遇到事务不匹配或其他内部错误，回退到重建实例
+          console.warn('setMarkdown error, fallback to recreate:', err);
+          this.recreateEditor(text);
+          return;
+        }
+        // 下一帧再移动光标与聚焦，避免事务重入
+        requestAnimationFrame(() => {
+          try {
+            if (typeof editor.focus === 'function') editor.focus();
+            if (typeof editor.moveCursorToEnd === 'function') editor.moveCursorToEnd();
+          } catch (e2) {
+            console.warn('editor focus/cursor error:', e2);
+          }
+        });
+      };
+      this.$nextTick(() => requestAnimationFrame(doSet));
+    },
+
+    // 重建编辑器实例并设置初始内容
+    recreateEditor(initialValue = '') {
+      const el = document.getElementById('md-editor');
+      if (!el) return;
+      try {
+        if (this.mdEditor && typeof this.mdEditor.destroy === 'function') {
+          this.mdEditor.destroy();
+        }
+      } catch (_) {}
+      // 清空容器，避免旧 UI 残留
+      try { el.innerHTML = ''; } catch (_) {}
+      try {
+        this.mdEditor = new toastui.Editor({
+          el,
+          height: '400px',
+          initialEditType: 'markdown',
+          previewStyle: 'vertical',
+          initialValue: initialValue || '',
+          placeholder: '在此输入Markdown内容'
+        });
+        try { window.__EDITOR_INST__ = this.mdEditor; } catch (_) {}
+      } catch (e) {
+        console.error('重新初始化编辑器失败', e);
+        this.mdEditor = null;
+      }
+      // 重新计算高度
+      this.$nextTick(() => this.updateLayoutHeights());
+    },
     async loadAll() {
       await db.init();
       const [cats, notes] = await Promise.all([db.getCategories(), db.getNotes()]);
@@ -158,13 +225,11 @@ const app = Vue.createApp({
         list.style.overflow = 'auto';
       }
 
-      // 调整 EasyMDE / CodeMirror 高度
-      if (this.mdEditor && this.mdEditor.codemirror) {
-        const toolbar = appEl.querySelector('.editor-toolbar');
-        const toolbarH = toolbar ? toolbar.offsetHeight : 0;
-        const editorAvailable = Math.max(200, available - toolbarH - 16);
+      // 调整 Toast UI Editor 高度
+      if (this.mdEditor && typeof this.mdEditor.setHeight === 'function') {
         try {
-          this.mdEditor.codemirror.setSize('100%', editorAvailable);
+          const editorAvailable = Math.max(200, available);
+          this.mdEditor.setHeight(editorAvailable + 'px');
         } catch (_) {}
       }
     },
@@ -173,10 +238,12 @@ const app = Vue.createApp({
       const n = this.notes.find(x => x.id === id);
       this.noteTitle = n?.title || '';
       this.noteContent = n?.content || '';
-      if (this.mdEditor) this.mdEditor.value(n?.content || '');
+      this.setEditorContentSafe(n?.content || '');
     },
     async saveNote() {
-      const content = this.mdEditor ? this.mdEditor.value() : (this.noteContent || '');
+      const content = this.mdEditor && typeof this.mdEditor.getMarkdown === 'function'
+        ? this.mdEditor.getMarkdown()
+        : (this.noteContent || '');
       if (!this.currentNoteId) {
         const categoryId = this.currentCategoryId || null;
         const resId = await db.addNote({ title: this.noteTitle || '未命名笔记', content: content, categoryId });
@@ -196,7 +263,35 @@ const app = Vue.createApp({
     clearEditor() {
       this.noteTitle = '';
       this.noteContent = '';
-      if (this.mdEditor) this.mdEditor.value('');
+      if (this.mdEditor && typeof this.mdEditor.setMarkdown === 'function') this.mdEditor.setMarkdown('');
+    },
+    async copyNoteContent() {
+      const text = this.mdEditor && typeof this.mdEditor.getMarkdown === 'function'
+        ? this.mdEditor.getMarkdown()
+        : (this.noteContent || '');
+      try {
+        if (!text) {
+          await CustomModal.showWarning('当前内容为空，未复制');
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        await CustomModal.showSuccess('内容已复制到剪贴板');
+      } catch (e) {
+        console.warn('复制失败', e);
+        await CustomModal.showError('复制失败，请手动复制');
+      }
     },
 
     async exportNotes() {
@@ -222,14 +317,21 @@ const app = Vue.createApp({
   },
   async mounted() {
     await this.loadAll();
-    this.mdEditor = new EasyMDE({
-      element: document.getElementById('md-editor'),
-      spellChecker: false,
-      autofocus: false,
-      status: false,
-      placeholder: '在此输入Markdown内容',
-      toolbar: ['bold','italic','heading','|','unordered-list','ordered-list','|','link','image','table','|','preview','side-by-side','fullscreen','|','guide']
-    });
+    // 使用 Toast UI Editor 替换 EasyMDE
+    try {
+      this.mdEditor = new toastui.Editor({
+        el: document.getElementById('md-editor'),
+        height: '400px',
+        initialEditType: 'markdown',
+        previewStyle: 'vertical',
+        placeholder: '在此输入Markdown内容'
+      });
+      // 暴露实例用于调试与自动化验证（不影响业务逻辑）
+      try { window.__EDITOR_INST__ = this.mdEditor; } catch (_) {}
+    } catch (e) {
+      console.error('初始化编辑器失败', e);
+      this.mdEditor = null;
+    }
     // 初始计算布局高度
     this.$nextTick(() => this.updateLayoutHeights());
     // 监听窗口尺寸变化
