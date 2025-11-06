@@ -14,6 +14,7 @@ const app = Vue.createApp({
       // editor
       noteTitle: '',
       noteContent: '',
+      noteCategoryId: null,
       mdEditor: null,
       isSidebarCollapsed: false
     };
@@ -141,10 +142,48 @@ const app = Vue.createApp({
     },
 
     async addNote() {
-      const title = await CustomModal.showPrompt('请输入笔记标题：', '新建笔记', '新笔记');
-      const categoryId = this.currentCategoryId || null;
-      await db.addNote({ title: (title && title !== true) ? title : '新笔记', content: '', categoryId });
-      this.notes = await db.getNotes();
+      // 在弹窗中同时设置标题与分类
+      const optionsHtml = [
+        `<option value="">未分类</option>`,
+        ...this.categories.map(c => `<option value="${c.id}" ${this.currentCategoryId === c.id ? 'selected' : ''}>${c.name}</option>`)
+      ].join('');
+      const html = `
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <label style="font-weight:600;">标题</label>
+          <input id="newNoteTitle" type="text" placeholder="请输入笔记标题" value="新笔记" style="padding:8px; border:1px solid #ddd; border-radius:6px;">
+          <label style="font-weight:600;">分类</label>
+          <select id="newNoteCategory" style="padding:8px; border:1px solid #ddd; border-radius:6px;">
+            ${optionsHtml}
+          </select>
+        </div>`;
+
+      let chosenTitle = '新笔记';
+      let chosenCat = this.currentCategoryId || null;
+      const promise = CustomModal.showHtml(html, '新建笔记', { showCancel: true, confirmText: '创建', cancelText: '取消' });
+      // 捕获确认时的输入值
+      setTimeout(() => {
+        const modalEl = document.getElementById('customModal');
+        const confirmBtn = modalEl && modalEl.querySelector('#modalFooter .modal-btn.primary');
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', () => {
+            const titleInput = document.getElementById('newNoteTitle');
+            const sel = document.getElementById('newNoteCategory');
+            chosenTitle = titleInput ? (titleInput.value || '新笔记') : '新笔记';
+            const val = sel ? sel.value : '';
+            chosenCat = val ? val : null;
+          }, { once: true });
+        }
+        const ti = document.getElementById('newNoteTitle');
+        if (ti) ti.focus();
+      }, 50);
+      const ok = await promise;
+      if (!ok) return;
+
+      this.currentNoteId = null;
+      this.noteTitle = chosenTitle;
+      this.noteContent = '';
+      this.noteCategoryId = chosenCat;
+      this.setEditorContentSafe('');
     },
     async renameNote(id) {
       const n = this.notes.find(x => x.id === id);
@@ -168,6 +207,49 @@ const app = Vue.createApp({
       }
     },
 
+    async changeNoteCategory(id) {
+      const n = this.notes.find(x => x.id === id);
+      if (!n) return;
+      const optionsHtml = [
+        `<option value="">未分类</option>`,
+        ...this.categories.map(c => `<option value="${c.id}" ${n.categoryId === c.id ? 'selected' : ''}>${c.name}</option>`)
+      ].join('');
+      const html = `
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <label style="font-weight:600;">分类</label>
+          <select id="editNoteCategory" style="padding:8px; border:1px solid #ddd; border-radius:6px;">
+            ${optionsHtml}
+          </select>
+        </div>`;
+
+      let selectedCat = n.categoryId || null;
+      const promise = CustomModal.showHtml(html, '修改分类', { showCancel: true, confirmText: '保存', cancelText: '取消' });
+      setTimeout(() => {
+        const modalEl = document.getElementById('customModal');
+        const confirmBtn = modalEl && modalEl.querySelector('#modalFooter .modal-btn.primary');
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', () => {
+            const sel = document.getElementById('editNoteCategory');
+            const val = sel ? sel.value : '';
+            selectedCat = val ? val : null;
+          }, { once: true });
+        }
+        const selEl = document.getElementById('editNoteCategory');
+        if (selEl) selEl.focus();
+      }, 50);
+
+      const ok = await promise;
+      if (!ok) return;
+      n.categoryId = selectedCat;
+      await db.updateNote(n);
+      this.notes = await db.getNotes();
+      // 若当前选中的是此笔记，同步编辑态
+      if (this.currentNoteId === id) {
+        this.noteCategoryId = selectedCat;
+      }
+      this.noteMenuId = null;
+    },
+
     toggleSidebar() {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
       const root = document.getElementById('app');
@@ -184,6 +266,7 @@ const app = Vue.createApp({
       const n = this.notes.find(x => x.id === id);
       this.noteTitle = n?.title || '';
       this.noteContent = n?.content || '';
+      this.noteCategoryId = n?.categoryId || null;
       this.setEditorContentSafe(n?.content || '');
     },
     async saveNote() {
@@ -191,7 +274,7 @@ const app = Vue.createApp({
         ? this.mdEditor.getMarkdown()
         : (this.noteContent || '');
       if (!this.currentNoteId) {
-        const categoryId = this.currentCategoryId || null;
+        const categoryId = (this.noteCategoryId != null) ? this.noteCategoryId : (this.currentCategoryId || null);
         const resId = await db.addNote({ title: this.noteTitle || '未命名笔记', content: content, categoryId });
         this.notes = await db.getNotes();
         const created = this.notes.find(n => n.id === resId?.id || n.title === (this.noteTitle || '未命名笔记'));
@@ -202,6 +285,7 @@ const app = Vue.createApp({
       if (!n) return;
       n.title = this.noteTitle || '未命名笔记';
       n.content = content;
+      n.categoryId = (this.noteCategoryId != null) ? this.noteCategoryId : n.categoryId;
       await db.updateNote(n);
       this.notes = await db.getNotes();
       try {

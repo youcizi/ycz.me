@@ -95,6 +95,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                   <div class="item-menu" v-if="noteMenuId === n.id">
                     <button class="menu-close" @click.stop="noteMenuId=null">×</button>
                     <button class="menu-item" @click.stop="renameNote(n.id)">重命名</button>
+                    <button class="menu-item" @click.stop="changeNoteCategory(n.id)">修改分类</button>
                     <button class="menu-item danger" @click.stop="deleteNote(n.id)">删除</button>
                   </div>
                 </li>
