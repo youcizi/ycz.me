@@ -83,6 +83,7 @@
 .note-page .note-layout-two-cols { height: 100%; }
 .note-page .note-list { height: 100%; overflow: auto; }
 .note-page .note-editor { height: 100%; display: flex; flex-direction: column; }
+.note-page .note-editor { overflow: auto; min-width: 0; }
 
 /* Markdown 编辑器（EasyMDE）微调，仅限 note 页面 */
 .note-page .note-editor .EasyMDEContainer { width: 100%; flex: 1 1 auto; display: flex; flex-direction: column; }
@@ -92,8 +93,10 @@
 
 /* Toast UI Editor 适配，仅限 note 页面 */
 .note-page .note-editor #md-editor { flex: 1 1 auto; min-height: 0; }
-.note-page .note-editor .toastui-editor-defaultUI { height: 100%; display: flex; flex-direction: column; }
-.note-page .note-editor .toastui-editor-main { flex: 1 1 auto; min-height: 0; }
+.note-page .note-editor .toastui-editor-defaultUI { height: 100%; width: 100%; display: flex; flex-direction: column; min-width: 0; }
+.note-page .note-editor .toastui-editor-main { flex: 1 1 auto; min-height: 0; width: 100%; min-width: 0; overflow: auto; }
+/* WYSIWYG 容器在窄屏下保持不溢出 */
+.note-page .note-editor .toastui-editor-ww-container { width: 100%; min-width: 0; overflow: auto; }
 
 /* 侧栏收缩按钮 */
 .note-collapse-btn { float: right; background: #f3f4f6; border: 1px solid #e5e7eb; color: #6b7280; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }

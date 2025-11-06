@@ -46,10 +46,10 @@ const app = Vue.createApp({
         this.recreateEditor(text);
         return;
       }
-      // 保证在 Markdown 模式下设置内容
+      // 保证在 WYSIWYG 模式下设置内容
       try {
-        if (typeof editor.isMarkdownMode === 'function' && !editor.isMarkdownMode()) {
-          editor.changeMode('markdown');
+        if (typeof editor.isMarkdownMode === 'function' && editor.isMarkdownMode()) {
+          editor.changeMode('wysiwyg');
         }
       } catch (_) {}
 
@@ -90,8 +90,7 @@ const app = Vue.createApp({
       try {
         this.mdEditor = new toastui.Editor({
           el,
-          height: '400px',
-          initialEditType: 'markdown',
+          initialEditType: 'wysiwyg',
           previewStyle: 'vertical',
           initialValue: initialValue || '',
           placeholder: '在此输入Markdown内容'
@@ -101,8 +100,6 @@ const app = Vue.createApp({
         console.error('重新初始化编辑器失败', e);
         this.mdEditor = null;
       }
-      // 重新计算高度
-      this.$nextTick(() => this.updateLayoutHeights());
     },
     async loadAll() {
       await db.init();
@@ -178,61 +175,10 @@ const app = Vue.createApp({
         if (this.isSidebarCollapsed) root.classList.add('note-collapsed');
         else root.classList.remove('note-collapsed');
       }
-      this.$nextTick(() => this.updateLayoutHeights());
     },
 
-    updateLayoutHeights() {
-      const appEl = document.getElementById('app');
-      if (!appEl) return;
-
-      // 视口高度与顶部导航高度
-      const vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-      const topBar = appEl.querySelector('.top-bar');
-      const topBarH = topBar ? topBar.offsetHeight : 0;
-      const targetH = Math.max(0, vh - topBarH);
-
-      // 仅设置 note-main 的高度，避免整页滚动；不再强制 main-content 高度与隐藏溢出
-      const noteMain = appEl.querySelector('.note-main');
-      if (noteMain) {
-        noteMain.style.height = targetH + 'px';
-      }
-
-      // 计算右侧内容区的可用高度（扣除内容头部和内边距）
-      const noteContent = appEl.querySelector('.note-content');
-      const contentHeader = appEl.querySelector('.content-header-row');
-      const contentHeaderH = contentHeader ? contentHeader.offsetHeight : 0;
-      let paddingTB = 0;
-      if (noteContent) {
-        const cs = getComputedStyle(noteContent);
-        paddingTB = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-      }
-
-      // 可用高度与滚动控制：让内容区自身滚动，确保底部操作（如“保存”按钮）可见
-      const available = Math.max(120, (noteMain ? noteMain.clientHeight : targetH) - contentHeaderH - paddingTB);
-      if (noteContent) {
-        noteContent.style.maxHeight = available + 'px';
-        noteContent.style.overflow = 'auto';
-      }
-
-      // 左侧列表与右侧编辑器的高度设置
-      const editor = appEl.querySelector('.note-editor');
-      const list = appEl.querySelector('.note-list');
-      if (editor) {
-        editor.style.minHeight = available + 'px';
-      }
-      if (list) {
-        list.style.maxHeight = available + 'px';
-        list.style.overflow = 'auto';
-      }
-
-      // 调整 Toast UI Editor 高度
-      if (this.mdEditor && typeof this.mdEditor.setHeight === 'function') {
-        try {
-          const editorAvailable = Math.max(200, available);
-          this.mdEditor.setHeight(editorAvailable + 'px');
-        } catch (_) {}
-      }
-    },
+    // 移除自动高度设置：保持为占位方法，避免旧调用报错
+    updateLayoutHeights() { /* no-op: rely on CSS relative units */ },
     selectNote(id) {
       this.currentNoteId = id;
       const n = this.notes.find(x => x.id === id);
@@ -258,7 +204,13 @@ const app = Vue.createApp({
       n.content = content;
       await db.updateNote(n);
       this.notes = await db.getNotes();
-      alert('已保存');
+      try {
+        if (window.CustomModal && typeof window.CustomModal.showSuccess === 'function') {
+          await window.CustomModal.showSuccess('已保存');
+        } else if (typeof CustomModal !== 'undefined' && typeof CustomModal.showAlert === 'function') {
+          await CustomModal.showAlert('已保存', '提示', 'success');
+        }
+      } catch (_) {}
     },
     clearEditor() {
       this.noteTitle = '';
@@ -321,8 +273,8 @@ const app = Vue.createApp({
     try {
       this.mdEditor = new toastui.Editor({
         el: document.getElementById('md-editor'),
-        height: '400px',
-        initialEditType: 'markdown',
+        // 初始高度交由 CSS 控制
+        initialEditType: 'wysiwyg',
         previewStyle: 'vertical',
         placeholder: '在此输入Markdown内容'
       });
@@ -332,13 +284,9 @@ const app = Vue.createApp({
       console.error('初始化编辑器失败', e);
       this.mdEditor = null;
     }
-    // 初始计算布局高度
-    this.$nextTick(() => this.updateLayoutHeights());
-    // 监听窗口尺寸变化
-    window.addEventListener('resize', this.updateLayoutHeights);
   },
   unmounted() {
-    window.removeEventListener('resize', this.updateLayoutHeights);
+    // 无需清理尺寸监听
   }
 });
 
