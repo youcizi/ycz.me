@@ -94,6 +94,7 @@ const app = Vue.createApp({
           el,
           initialEditType: 'wysiwyg',
           previewStyle: 'vertical',
+          height: '62vh',
           initialValue: initialValue || '',
           placeholder: '在此输入Markdown内容'
         });
@@ -364,20 +365,21 @@ const app = Vue.createApp({
   async mounted() {
     await this.loadAll();
     // 使用 Toast UI Editor 替换 EasyMDE
-    try {
-      this.mdEditor = new toastui.Editor({
-        el: document.getElementById('md-editor'),
-        // 初始高度交由 CSS 控制
-        initialEditType: 'wysiwyg',
-        previewStyle: 'vertical',
-        placeholder: '在此输入Markdown内容'
-      });
-      // 暴露实例用于调试与自动化验证（不影响业务逻辑）
-      try { window.__EDITOR_INST__ = this.mdEditor; } catch (_) {}
-    } catch (e) {
-      console.error('初始化编辑器失败', e);
-      this.mdEditor = null;
-    }
+      try {
+        this.mdEditor = new toastui.Editor({
+          el: document.getElementById('md-editor'),
+        // 设置固定高度
+          initialEditType: 'wysiwyg',
+          previewStyle: 'vertical',
+          height: '62vh',
+          placeholder: '在此输入Markdown内容'
+        });
+        // 暴露实例用于调试与自动化验证（不影响业务逻辑）
+        try { window.__EDITOR_INST__ = this.mdEditor; } catch (_) {}
+      } catch (e) {
+        console.error('初始化编辑器失败', e);
+        this.mdEditor = null;
+      }
   },
   unmounted() {
     // 无需清理尺寸监听

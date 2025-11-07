@@ -108,3 +108,7 @@
 .note-page.note-collapsed .note-cat-item { gap: 6px; padding: 6px 8px; }
 .note-page.note-collapsed .cat-name, .note-page.note-collapsed .cat-actions { display: none; }
 .note-page.note-collapsed .note-title { display: flex; align-items: center; justify-content: space-between; }
+/* 固定编辑器容器高度，确保 Toast UI Editor 与布局一致 */
+.note-page #md-editor {
+  height: 62vh;
+}
