@@ -108,14 +108,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <label class="tool-label">标题</label>
                 <input class="tool-input" type="text" v-model="noteTitle" placeholder="请输入笔记标题">
               </div>
-              <div class="tool-row column">
+              <div class="tool-row column" v-show="isEditing">
                 <label class="tool-label">内容</label>
                 <div id="md-editor"></div>
               </div>
+              <div class="tool-row column" v-show="!isEditing">
+                <label class="tool-label">内容</label>
+                <div class="md-view" style="white-space: pre-wrap; border: 1px solid #eee; border-radius: 6px; padding: 12px; min-height: 180px; background: #fafafa;">
+                  {{ noteContent }}
+                </div>
+              </div>
               <div class="tool-actions">
-                <button class="tool-btn primary" @click="saveNote">保存</button>
+                <button class="tool-btn primary" v-show="isEditing" @click="saveNote">保存</button>
+                <button class="tool-btn primary" v-show="!isEditing" @click="editNote">编辑</button>
                 <button class="tool-btn secondary" @click="copyNoteContent">复制内容</button>
-                <button class="tool-btn ghost" @click="clearEditor">清空</button>
+                <button class="tool-btn ghost" v-show="isEditing" @click="clearEditor">清空</button>
               </div>
             </div>
           </div>

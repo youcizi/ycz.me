@@ -16,7 +16,8 @@ const app = Vue.createApp({
       noteContent: '',
       noteCategoryId: null,
       mdEditor: null,
-      isSidebarCollapsed: false
+      isSidebarCollapsed: false,
+      isEditing: false
     };
   },
   computed: {
@@ -183,6 +184,7 @@ const app = Vue.createApp({
       this.noteTitle = chosenTitle;
       this.noteContent = '';
       this.noteCategoryId = chosenCat;
+      this.isEditing = true;
       this.setEditorContentSafe('');
     },
     async renameNote(id) {
@@ -267,6 +269,7 @@ const app = Vue.createApp({
       this.noteTitle = n?.title || '';
       this.noteContent = n?.content || '';
       this.noteCategoryId = n?.categoryId || null;
+      this.isEditing = false;
       this.setEditorContentSafe(n?.content || '');
     },
     async saveNote() {
@@ -288,6 +291,8 @@ const app = Vue.createApp({
       n.categoryId = (this.noteCategoryId != null) ? this.noteCategoryId : n.categoryId;
       await db.updateNote(n);
       this.notes = await db.getNotes();
+      this.noteContent = content;
+      this.isEditing = false;
       try {
         if (window.CustomModal && typeof window.CustomModal.showSuccess === 'function') {
           await window.CustomModal.showSuccess('已保存');
@@ -296,13 +301,18 @@ const app = Vue.createApp({
         }
       } catch (_) {}
     },
+    editNote() {
+      // 切换回编辑模式，并将当前内容写入编辑器
+      this.isEditing = true;
+      this.setEditorContentSafe(this.noteContent || '');
+    },
     clearEditor() {
       this.noteTitle = '';
       this.noteContent = '';
       if (this.mdEditor && typeof this.mdEditor.setMarkdown === 'function') this.mdEditor.setMarkdown('');
     },
     async copyNoteContent() {
-      const text = this.mdEditor && typeof this.mdEditor.getMarkdown === 'function'
+      const text = this.isEditing && this.mdEditor && typeof this.mdEditor.getMarkdown === 'function'
         ? this.mdEditor.getMarkdown()
         : (this.noteContent || '');
       try {
