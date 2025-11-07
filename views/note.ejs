@@ -121,6 +121,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
               <div class="tool-actions">
                 <button class="tool-btn primary" v-show="isEditing" @click="saveNote">保存</button>
                 <button class="tool-btn primary" v-show="!isEditing" @click="editNote">编辑</button>
+                <button class="tool-btn secondary" v-show="isEditing" @click="cancelEdit">取消</button>
                 <button class="tool-btn secondary" @click="copyNoteContent">复制内容</button>
                 <button class="tool-btn ghost" v-show="isEditing" @click="clearEditor">清空</button>
               </div>

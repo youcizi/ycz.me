@@ -302,6 +302,26 @@ const app = Vue.createApp({
         }
       } catch (_) {}
     },
+    cancelEdit() {
+      // 取消编辑：恢复为未编辑状态，并还原未保存的改动
+      if (!this.currentNoteId) {
+        // 新建未保存的笔记，取消则清空当前编辑态
+        this.noteTitle = '';
+        this.noteContent = '';
+        this.noteCategoryId = null;
+        this.isEditing = false;
+        this.setEditorContentSafe('');
+        return;
+      }
+      const n = this.notes.find(x => x.id === this.currentNoteId);
+      if (n) {
+        this.noteTitle = n.title || '';
+        this.noteContent = n.content || '';
+        this.noteCategoryId = n.categoryId || null;
+      }
+      this.isEditing = false;
+      this.setEditorContentSafe(this.noteContent || '');
+    },
     editNote() {
       // 切换回编辑模式，并将当前内容写入编辑器
       this.isEditing = true;
